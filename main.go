@@ -2,22 +2,21 @@ package main
 
 import (
 	"log"
-	"net/http"
 
 	"github.com/fastjack-it/conductor/config"
 	"github.com/fastjack-it/conductor/handlers"
-
-	"github.com/gorilla/mux"
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
 	config.LoadConfig()
 
-	r := mux.NewRouter()
+	r := gin.Default()
 
-	r.HandleFunc("/oauth/token", handlers.TokenHandler).Methods("POST")
-	r.HandleFunc("/oauth/authorize", handlers.AuthorizeHandler).Methods("GET", "POST")
+	r.POST("/oauth/token", handlers.TokenHandler)
+	r.GET("/oauth/authorize", handlers.AuthorizeHandler)
+	r.POST("/oauth/authorize", handlers.AuthorizeHandler)
 
-	log.Println("conductor is running on port 5001")
-	log.Fatal(http.ListenAndServe(":5001", r))
+	log.Println("OAuth server is running on port 8080")
+	log.Fatal(r.Run(":8080"))
 }
