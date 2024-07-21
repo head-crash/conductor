@@ -12,8 +12,7 @@ var (
 	ClientSecret  string
 	RedirectURI   string
 	SecretKey     string
-	DbEndpoint    string
-	DbName        string
+	DbFilePath    string
 	ExpirySeconds int
 )
 
@@ -45,9 +44,7 @@ func LoadConfig() {
 
 	ClientID = getEnvOrDef("CLIENT_ID", required)
 	ClientSecret = getEnvOrDef("CLIENT_SECRET", required)
-	RedirectURI = getEnvOrDef("REDIRECT_URI", required)
 	SecretKey = getEnvOrDef("SECRET_KEY", required)
-	DbEndpoint = getEnvOrDef("DB_ENDPOINT", required)
-	DbName = getEnvOrDef("DB_NAME", required)
+	DbFilePath = getEnvOrDef("DB_FILE_PATH", defaultString("./conductor.db"))
 	ExpirySeconds = strToInt(getEnvOrDef("EXPIRY_SECONDS", defaultString("3600")))
 }

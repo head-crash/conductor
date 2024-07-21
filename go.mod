@@ -1,6 +1,6 @@
 module github.com/fastjack-it/conductor
 
-go 1.21.11
+go 1.22.5
 
 require (
 	github.com/bytedance/sonic v1.11.9 // indirect
