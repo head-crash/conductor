@@ -1,4 +1,4 @@
-package database
+package persistence
 
 import (
 	"database/sql"
@@ -12,6 +12,8 @@ import (
 type Sqlite struct {
 	client *sql.DB
 }
+
+var Db = Init()
 
 func Init() *Sqlite {
 	var err error

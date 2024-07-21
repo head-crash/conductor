@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/fastjack-it/conductor/config"
+	p "github.com/fastjack-it/conductor/persistence"
 	"github.com/fastjack-it/conductor/utils"
 	"github.com/gin-gonic/gin"
 )
@@ -20,7 +20,8 @@ func TokenHandler(c *gin.Context) {
 	clientID := c.PostForm("client_id")
 	clientSecret := c.PostForm("client_secret")
 
-	if clientID != config.ClientID || clientSecret != config.ClientSecret {
+	client, err := p.Db.GetClientById(clientID)
+	if err != nil || clientID != client.ClientId || clientSecret != client.Secret {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid client credentials"})
 		return
 	}

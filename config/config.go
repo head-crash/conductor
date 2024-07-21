@@ -8,9 +8,6 @@ import (
 )
 
 var (
-	ClientID      string
-	ClientSecret  string
-	RedirectURI   string
 	SecretKey     string
 	DbFilePath    string
 	ExpirySeconds int
@@ -42,8 +39,6 @@ func LoadConfig() {
 		return func() string { return value }
 	}
 
-	ClientID = getEnvOrDef("CLIENT_ID", required)
-	ClientSecret = getEnvOrDef("CLIENT_SECRET", required)
 	SecretKey = getEnvOrDef("SECRET_KEY", required)
 	DbFilePath = getEnvOrDef("DB_FILE_PATH", defaultString("./conductor.db"))
 	ExpirySeconds = strToInt(getEnvOrDef("EXPIRY_SECONDS", defaultString("3600")))
