@@ -4,19 +4,14 @@ import (
 	"log"
 
 	"github.com/fastjack-it/conductor/config"
-	"github.com/fastjack-it/conductor/handlers"
-	"github.com/gin-gonic/gin"
+	"github.com/fastjack-it/conductor/router"
 )
 
 func main() {
 	config.LoadConfig()
+	r := router.Init()
+	r.SetRoutes()
 
-	r := gin.Default()
-
-	r.POST("/oauth/token", handlers.TokenHandler)
-	r.GET("/oauth/authorize", handlers.AuthorizeHandler)
-	r.POST("/oauth/authorize", handlers.AuthorizeHandler)
-
-	log.Println("OAuth server is running on port 8080")
-	log.Fatal(r.Run(":8080"))
+	log.Printf("OAuth server is running on port %s", config.Port)
+	log.Fatal(r.Run(`:${config.Port}`))
 }

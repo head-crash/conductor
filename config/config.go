@@ -11,6 +11,9 @@ var (
 	SecretKey     string
 	DbFilePath    string
 	ExpirySeconds int
+	Port          string
+	EndpointUrl   string
+	AuthTimeOut   int
 )
 
 func getEnvOrDef(env string, def func() string) string {
@@ -41,5 +44,8 @@ func LoadConfig() {
 
 	SecretKey = getEnvOrDef("SECRET_KEY", required)
 	DbFilePath = getEnvOrDef("DB_FILE_PATH", defaultString("./conductor.db"))
-	ExpirySeconds = strToInt(getEnvOrDef("EXPIRY_SECONDS", defaultString("3600")))
+	ExpirySeconds = strToInt(getEnvOrDef("TOKEN_EXPIRY_SECONDS", defaultString("3600")))
+	Port = getEnvOrDef("PORT", defaultString("8080"))
+	EndpointUrl = getEnvOrDef("ENDPOINT_URL", defaultString("http://localhost:"+Port))
+	AuthTimeOut = strToInt(getEnvOrDef("AUTH_TIMEOUT_SECONDS", defaultString("300")))
 }

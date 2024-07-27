@@ -7,10 +7,10 @@ import (
 	"github.com/fastjack-it/conductor/config"
 )
 
-func GenerateToken(clientID, tokenType string, expiresIn int64) (string, error) {
+func GenerateToken(userId, tokenType string, expiresIn int64) (string, error) {
 	claims := &jwt.StandardClaims{
 		ExpiresAt: time.Now().Add(time.Duration(expiresIn) * time.Second).Unix(),
-		Subject:   clientID,
+		Subject:   userId,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
