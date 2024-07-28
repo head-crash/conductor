@@ -1,3 +1,4 @@
-# Ignore local .env file
 .env
 /vendor/
+conductor.db
+
