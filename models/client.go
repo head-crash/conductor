@@ -1,7 +1,7 @@
 package models
 
 type Client struct {
-	Id          string `json:"clientId"`
+	Id          string `json:"client_id"`
 	Secret      string `json:"secret"`
-	RedirectUri string `json:"redirectUri"`
+	RedirectUrl string `json:"redirectUrl"`
 }

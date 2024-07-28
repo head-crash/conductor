@@ -14,8 +14,7 @@ func Init() *router {
 }
 
 func (r *router) SetRoutes() {
-	r.POST("/oauth/token", handlers.Auth.InitiateTokenRequest)
-	r.GET("/oauth/token", handlers.Auth.IssueToken)
+	r.POST("/oauth/token", handlers.Auth.IssueToken)
 	r.POST("/oauth/login", handlers.Auth.Authenticate)
 	r.GET("/oauth/login", handlers.Auth.LoginPage)
 }

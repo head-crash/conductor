@@ -112,7 +112,7 @@ FROM clients
 WHERE clientId = ?`
 	row := db.client.QueryRow(query, clientID)
 	var c models.Client
-	err := row.Scan(&c.Id, &c.Secret, &c.RedirectUri)
+	err := row.Scan(&c.Id, &c.Secret, &c.RedirectUrl)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -126,7 +126,7 @@ func (db *Sqlite) CreateClient(c *models.Client) error {
 	query := `
 	INSERT INTO clients (clientId, secret, redirectUri)
 	VALUES (?, ?, ?);`
-	_, err := db.client.Exec(query, c.Id, c.Secret, c.RedirectUri)
+	_, err := db.client.Exec(query, c.Id, c.Secret, c.RedirectUrl)
 	return err
 }
 
@@ -135,7 +135,7 @@ func (db *Sqlite) UpdateClient(c *models.Client) error {
 	UPDATE clients
 	SET secret = ?, redirectUri = ?
 	WHERE clientId = ?;`
-	_, err := db.client.Exec(query, c.Secret, c.RedirectUri, c.Id)
+	_, err := db.client.Exec(query, c.Secret, c.RedirectUrl, c.Id)
 	return err
 }
 

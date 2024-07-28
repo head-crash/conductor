@@ -14,6 +14,7 @@ var (
 	Port          string
 	EndpointUrl   string
 	AuthTimeOut   int
+	LoginHtml     string
 )
 
 func getEnvOrDef(env string, def func() string) string {
@@ -23,6 +24,15 @@ func getEnvOrDef(env string, def func() string) string {
 		return def()
 	}
 	return value
+}
+
+func EndpointUrlFor(paths ...string) string {
+	parts := append([]string{EndpointUrl}, paths...)
+	fullUrl := ""
+	for _, part := range parts {
+		fullUrl += part
+	}
+	return fullUrl
 }
 
 func LoadConfig() {
@@ -48,4 +58,10 @@ func LoadConfig() {
 	Port = getEnvOrDef("PORT", defaultString("8080"))
 	EndpointUrl = getEnvOrDef("ENDPOINT_URL", defaultString("http://localhost:"+Port))
 	AuthTimeOut = strToInt(getEnvOrDef("AUTH_TIMEOUT_SECONDS", defaultString("300")))
+
+	fileContent, err := os.ReadFile("config/login.html")
+	if err != nil {
+		log.Fatalf("Failed to read login.html: %v", err)
+	}
+	LoginHtml = string(fileContent)
 }
