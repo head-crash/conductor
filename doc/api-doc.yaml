@@ -1,0 +1,144 @@
+openapi: 3.0.0
+info:
+  title: API Dokumentation
+  description: Dies ist die API Dokumentation für die Anwendung.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+    description: Lokaler Server
+paths:
+  /oauth/token:
+    get:
+      summary: Token anfordern
+      parameters:
+        - name: authorization_code
+          in: query
+          required: true
+          schema:
+            type: string
+      security:
+        - basicAuth: []
+      responses:
+        '200':
+          description: Erfolgreiche Antwort
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponseBody'
+        '401':
+          description: Ungültige Anmeldeinformationen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseBody'
+  /oauth/login:
+    post:
+      summary: Benutzer authentifizieren
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LoginRequestBody'
+      responses:
+        '302':
+          description: Erfolgreiche Authentifizierung und Weiterleitung
+          headers:
+            Location:
+              description: URL der Weiterleitung
+              schema:
+                type: string
+        '401':
+          description: Ungültige Anmeldeinformationen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseBody'
+    get:
+      summary: Login-Seite anzeigen
+      responses:
+        '200':
+          description: Login-Seite erfolgreich angezeigt
+          content:
+            text/html:
+              schema:
+                type: string
+  /user:
+    post:
+      summary: Benutzer erstellen
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequestBody'
+      responses:
+        '201':
+          description: Benutzer erfolgreich erstellt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponseBody'
+        '400':
+          description: Ungültige Eingabe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseBody'
+components:
+  schemas:
+    TokenResponseBody:
+      type: object
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+        refresh_token:
+          type: string
+        expires_in:
+          type: string
+          format: date-time
+    CreateUserRequestBody:
+      type: object
+      properties:
+        password:
+          type: string
+        email:
+          type: string
+    UserResponseBody:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    LoginRequestBody:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+        client_id:
+          type: string
+        scope:
+          type: string
+        state:
+          type: string
+    ErrorResponseBody:
+      type: object
+      properties:
+        error:
+          type: string
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+security:
+  - BearerAuth: []

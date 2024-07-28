@@ -13,9 +13,7 @@ type Sqlite struct {
 	client *sql.DB
 }
 
-var Db = Init()
-
-func Init() *Sqlite {
+func NewSqliteDb() *Sqlite {
 	var err error
 	var client *sql.DB
 	client, err = sql.Open("sqlite3", config.DbFilePath)

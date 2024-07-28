@@ -15,6 +15,7 @@ var (
 	EndpointUrl   string
 	AuthTimeOut   int
 	LoginHtml     string
+	Log           *log.Logger
 )
 
 func getEnvOrDef(env string, def func() string) string {
@@ -24,15 +25,6 @@ func getEnvOrDef(env string, def func() string) string {
 		return def()
 	}
 	return value
-}
-
-func EndpointUrlFor(paths ...string) string {
-	parts := append([]string{EndpointUrl}, paths...)
-	fullUrl := ""
-	for _, part := range parts {
-		fullUrl += part
-	}
-	return fullUrl
 }
 
 func LoadConfig() {
