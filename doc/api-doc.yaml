@@ -19,18 +19,18 @@ paths:
       security:
         - basicAuth: []
       responses:
-        '200':
+        "200":
           description: Erfolgreiche Antwort
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TokenResponseBody'
-        '401':
+                $ref: "#/components/schemas/TokenResponseBody"
+        "401":
           description: Ungültige Anmeldeinformationen
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponseBody'
+                $ref: "#/components/schemas/ErrorResponseBody"
   /oauth/login:
     post:
       summary: Benutzer authentifizieren
@@ -38,51 +38,103 @@ paths:
         content:
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/LoginRequestBody'
+              $ref: "#/components/schemas/LoginRequestBody"
       responses:
-        '302':
+        "302":
           description: Erfolgreiche Authentifizierung und Weiterleitung
           headers:
             Location:
               description: URL der Weiterleitung
               schema:
                 type: string
-        '401':
+        "401":
           description: Ungültige Anmeldeinformationen
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponseBody'
+                $ref: "#/components/schemas/ErrorResponseBody"
     get:
       summary: Login-Seite anzeigen
       responses:
-        '200':
+        "200":
           description: Login-Seite erfolgreich angezeigt
           content:
             text/html:
               schema:
                 type: string
-  /user:
+  /users:
     post:
       summary: Benutzer erstellen
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateUserRequestBody'
+              $ref: "#/components/schemas/CreateUserRequestBody"
       responses:
-        '201':
+        "201":
           description: Benutzer erfolgreich erstellt
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserResponseBody'
-        '400':
+                $ref: "#/components/schemas/UserResponseBody"
+        "400":
           description: Ungültige Eingabe
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponseBody'
+                $ref: "#/components/schemas/ErrorResponseBody"
+  /clients:
+    post:
+      summary: Create a new client
+      operationId: createClient
+      requestBody:
+        description: Request body for creating a new client
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateClientRequestBody"
+      responses:
+        "201":
+          description: Client created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: User created
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Invalid request body
+        "409":
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: A user with that email already exists
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Secret encryption failed
 components:
   schemas:
     TokenResponseBody:
@@ -132,6 +184,28 @@ components:
       properties:
         error:
           type: string
+    CreateClientRequestBody:
+      type: object
+      properties:
+        secret:
+          type: string
+          example: mysecretpassword
+        redirectUrl:
+          type: string
+          example: http://example.com/callback
+      required:
+        - secret
+        - redirectUrl
+    ClientResponseBody:
+      type: object
+      properties:
+        client_id:
+          type: string
+        client_name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
   securitySchemes:
     basicAuth:
       type: http

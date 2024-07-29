@@ -6,6 +6,7 @@ import (
 	"github.com/fastjack-it/conductor/models"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type user struct {
@@ -26,19 +27,25 @@ func NewUser() *user {
 	}
 }
 
-func (u *user) Set(entity EntityType, value string) *user {
-	switch entity {
-	case EMAIL:
-		u.Email = value
-	case PASSWORD:
-		u.Password = value
-	case ROLE:
-		if models.Role(value).IsValid() {
-			u.Role = models.Role(value)
-		}
-	case ID:
-		u.Uuid = value
+func (u *user) SetEmail(email string) *user {
+	u.Email = email
+	return u
+}
+
+func (u *user) SetPassword(password string) *user {
+	u.Password = password
+	return u
+}
+
+func (u *user) SetRole(role string) *user {
+	if models.Role(role).IsValid() {
+		u.Role = models.Role(role)
 	}
+	return u
+}
+
+func (u *user) SetId(id string) *user {
+	u.Uuid = id
 	return u
 }
 
@@ -48,16 +55,22 @@ func (uh *UserHandler) Create(c *gin.Context) {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
-	newUser := NewUser().
-		Set(EMAIL, createUserRequest.Email).
-		Set(PASSWORD, createUserRequest.Password).
-		Set(ROLE, string(models.USER)).
-		Set(ID, uuid.New().String())
 
-	if err := uh.db.CreateUser(newUser.UserAccount); err != nil {
-		c.JSON(http.StatusConflict, gin.H{"error": "A user with that email already exists"})
+	if encryptedPassword, err := bcrypt.GenerateFromPassword([]byte(createUserRequest.Password), bcrypt.DefaultCost); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Pasword encryption failed"})
 		return
-	}
+	} else {
+		newUser := NewUser().
+			SetEmail(createUserRequest.Email).
+			SetPassword(string(encryptedPassword)).
+			SetRole(string(models.USER)).
+			SetId(uuid.New().String())
 
-	c.JSON(http.StatusCreated, gin.H{"message": "User created"})
+		if err := uh.db.CreateUser(newUser.UserAccount); err != nil {
+			c.JSON(http.StatusConflict, gin.H{"error": "A user with that email already exists"})
+			return
+		}
+
+		c.JSON(http.StatusCreated, gin.H{"message": "User created"})
+	}
 }

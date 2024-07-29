@@ -1,7 +1,9 @@
 package persistence
 
 import (
+	"context"
 	"database/sql"
+	"fmt"
 	"log"
 
 	"github.com/fastjack-it/conductor/config"
@@ -20,7 +22,7 @@ func NewSqliteDb() *Sqlite {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	var DB = Sqlite{client: client}
+	var DB = Sqlite{client}
 	// Create users table if it doesn't exist
 	createTableQuery := `
 	CREATE TABLE IF NOT EXISTS users (
@@ -34,7 +36,7 @@ func NewSqliteDb() *Sqlite {
 	CREATE TABLE IF NOT EXISTS clients (
 		clientId TEXT PRIMARY KEY,
 		secret TEXT,
-		redirectUri TEXT
+		redirectUrl TEXT
 	);`
 	_, err = DB.client.Exec(createTableQuery)
 	if err != nil {
@@ -44,38 +46,45 @@ func NewSqliteDb() *Sqlite {
 }
 
 func (db *Sqlite) GetUserById(userID string) (*models.UserAccount, error) {
+	ctx := context.Background()
+	user := &models.UserAccount{}
 	query := `
-SELECT uuid, password, email, role, created_at
-FROM users
-WHERE uuid = ?`
-	row := db.client.QueryRow(query, userID)
-
-	var u models.UserAccount
-	err := row.Scan(&u.Uuid, &u.Password, &u.Email, &u.Role)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
-		}
-		return nil, err
+		SELECT uuid, password, email, role
+		FROM users
+		WHERE uuid=?;`
+	err := db.client.QueryRowContext(ctx, query, userID).Scan(&user.Uuid, &user.Password, &user.Email, &user.Role)
+	switch {
+	case err == sql.ErrNoRows:
+		return nil, nil
+	case err != nil:
+		return nil, fmt.Errorf("query error: %v", err)
+	default:
+		return user, nil
 	}
-	return &u, nil
 }
 
 func (db *Sqlite) GetUserByEmail(email string) (*models.UserAccount, error) {
 	query := `
-SELECT uuid, password, email, role, created_at
-FROM users
-WHERE email = ?`
-	row := db.client.QueryRow(query, email)
-	var u models.UserAccount
-	err := row.Scan(&u.Uuid, &u.Password, &u.Email, &u.Role)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
+		SELECT uuid, password, email, role
+		FROM users
+		WHERE email='?';`
+	if row, err := db.client.Query(query, email); err != nil {
+		return nil, fmt.Errorf("query error: %v", err)
+	} else {
+		user := &models.UserAccount{}
+		if err = row.Scan(&user.Uuid, &user.Password, &user.Email, &user.Role); err != nil {
+			return nil, fmt.Errorf("query error: %v", err)
 		}
-		return nil, err
+		return user, nil
 	}
-	return &u, nil
+
+	// switch {
+	// case err == sql.ErrNoRows:
+	// 	return nil, fmt.Errorf("query error: %v", err)
+	// case err != nil:
+	// 	return nil, fmt.Errorf("query error: %v", err)
+	// default:
+	// 	return user, nil
 }
 
 func (db *Sqlite) CreateUser(u *models.UserAccount) error {
@@ -103,26 +112,28 @@ func (db *Sqlite) DeleteUser(userID string) error {
 	return err
 }
 
-func (db *Sqlite) GetClientById(clientID string) (*models.Client, error) {
+func (db *Sqlite) GetClientById(clientId string) (*models.Client, error) {
+	ctx := context.Background()
 	query := `
-SELECT clientId, secret, redirectUri
-FROM clients
-WHERE clientId = ?`
-	row := db.client.QueryRow(query, clientID)
-	var c models.Client
-	err := row.Scan(&c.Id, &c.Secret, &c.RedirectUrl)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return &c, nil
+		SELECT clientId, secret, redirectUrl
+		FROM clients
+		WHERE clientId='?';`
+	client := &models.Client{}
+	err := db.client.QueryRowContext(ctx, query, clientId).Scan(&client.Id, &client.Secret, &client.RedirectUrl)
+	return client, err
+	// switch {
+	// case err == sql.ErrNoRows:
+	// 	return nil, fmt.Errorf("query error: %v", err)
+	// 	//return nil, nil
+	// case err != nil:
+	// 	return nil, fmt.Errorf("query error: %v", err)
+	// default:
+	// 	return client, nil
 }
 
 func (db *Sqlite) CreateClient(c *models.Client) error {
 	query := `
-	INSERT INTO clients (clientId, secret, redirectUri)
+	INSERT INTO clients (clientId, secret, redirectUrl)
 	VALUES (?, ?, ?);`
 	_, err := db.client.Exec(query, c.Id, c.Secret, c.RedirectUrl)
 	return err
@@ -131,7 +142,7 @@ func (db *Sqlite) CreateClient(c *models.Client) error {
 func (db *Sqlite) UpdateClient(c *models.Client) error {
 	query := `
 	UPDATE clients
-	SET secret = ?, redirectUri = ?
+	SET secret = ?, redirectUrl = ?
 	WHERE clientId = ?;`
 	_, err := db.client.Exec(query, c.Secret, c.RedirectUrl, c.Id)
 	return err

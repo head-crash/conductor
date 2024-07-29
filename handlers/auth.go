@@ -2,15 +2,15 @@ package handlers
 
 import (
 	"fmt"
-	"log"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
+	"github.com/dgrijalva/jwt-go"
+
 	"github.com/fastjack-it/conductor/config"
+	"github.com/fastjack-it/conductor/logger"
 	"github.com/fastjack-it/conductor/models"
-	"github.com/fastjack-it/conductor/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -28,6 +28,31 @@ type AuthenticationState struct {
 type AuthHandler struct {
 	pendingAuthorizations map[string]*AuthenticationState
 	db                    models.Database
+}
+
+var log = logger.Default
+
+func GenerateToken(userId, tokenType string, expiresIn int64) (string, error) {
+	claims := &jwt.StandardClaims{
+		ExpiresAt: time.Now().Add(time.Duration(expiresIn) * time.Second).Unix(),
+		Subject:   userId,
+		Issuer:    config.EndpointUrl,
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(config.SecretKey))
+}
+
+func ValidateToken(tokenString string) (string, error) {
+	if token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		return []byte(config.SecretKey), nil
+	}); err != nil {
+		return "", err
+	} else if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		return claims["sub"].(string), nil
+	} else {
+		return "", nil
+	}
 }
 
 func NewAuthHandler(db models.Database) *AuthHandler {
@@ -51,19 +76,17 @@ func (as *AuthenticationState) getUserId() string {
 	return as.user.Uuid
 }
 
-func (as *AuthenticationState) IsPasswordValid(entityType EntityType, password string) bool {
-	var hashedPassword string
-	log.Default().Printf("Checking password %s for %s", password, entityType)
-	switch EntityType(entityType) {
-	case USER:
-		hashedPassword = as.user.Password
-	case CLIENT:
-		hashedPassword = as.client.Secret
-	default:
+func (as *AuthenticationState) IsUserPasswordValid(password string) bool {
+	hashedPassword := as.user.Password
+	if err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password)); err != nil {
 		return false
 	}
-	if err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password)); err != nil {
-		log.Printf("[error] Failed to compare password: %s", err)
+	return true
+}
+
+func (as *AuthenticationState) IsClientSecretValid(secret string) bool {
+	hashedSecret := as.client.Secret
+	if err := bcrypt.CompareHashAndPassword([]byte(hashedSecret), []byte(secret)); err != nil {
 		return false
 	}
 	return true
@@ -77,40 +100,31 @@ func (as *AuthenticationState) generateEncryptedSecret(decryptedPassword string)
 	return "", err
 }
 
-func (as *AuthenticationState) Set(entityType EntityType, entity interface{}) *AuthenticationState {
-	switch EntityType(entityType) {
-	case USER:
-		if user, ok := entity.(models.UserAccount); ok {
-			as.user = user
-		}
-	case CLIENT:
-		if client, ok := entity.(models.Client); ok {
-			as.client = client
-		}
-	case SCOPE:
-		if scope, ok := entity.([]string); ok {
-			as.scope = scope
-		}
-	case STATE:
-		if state, ok := entity.(string); ok {
-			as.state = state
-		}
-	case PASSWORD:
-		if pw, ok := entity.(string); ok {
-			if pw, err := as.generateEncryptedSecret(pw); err != nil {
-				log.Printf("[error] Failed to hash password: %s", err)
-			} else {
-				as.user.Password = pw
-			}
-		}
-	case SECRET:
-		if clientSecret, ok := entity.(string); ok {
-			if secret, err := as.generateEncryptedSecret(clientSecret); err != nil {
-				log.Printf("[error] Failed to hash password: %s", err)
-			} else {
-				as.client.Secret = secret
-			}
-		}
+func (as *AuthenticationState) SetUser(user models.UserAccount) *AuthenticationState {
+	as.user = user
+	return as
+}
+
+func (as *AuthenticationState) SetClient(client models.Client) *AuthenticationState {
+	as.client = client
+	return as
+}
+
+func (as *AuthenticationState) SetScope(scope []string) *AuthenticationState {
+	as.scope = scope
+	return as
+}
+
+func (as *AuthenticationState) SetState(state string) *AuthenticationState {
+	as.state = state
+	return as
+}
+
+func (as *AuthenticationState) SetPassword(password string) *AuthenticationState {
+	if pw, err := as.generateEncryptedSecret(password); err != nil {
+		log.Error("Failed to hash password: %s", err)
+	} else {
+		as.user.Password = pw
 	}
 	return as
 }
@@ -171,43 +185,47 @@ func (ah *AuthHandler) LoginPageError(c *gin.Context, m ErrorMessage) {
 	} else {
 		errorMessage = string(m)
 	}
-	c.Redirect(http.StatusFound,
-		"/oauth/login?error="+
-			url.PathEscape(errorMessage)+
-			"&state="+
-			url.PathEscape(c.PostForm("state"))+
-			"&client_id="+
-			url.PathEscape(c.PostForm("client_id"))+
-			"&scope="+
-			url.PathEscape((c.PostForm("scope"))))
+	c.JSON(http.StatusUnauthorized, gin.H{"error": errorMessage})
+	/*
+		c.Redirect(http.StatusFound,
+			"/oauth/login?error="+
+				url.PathEscape(errorMessage)+
+				"&state="+
+				url.PathEscape(c.PostForm("state"))+
+				"&client_id="+
+				url.PathEscape(c.PostForm("client_id"))+
+				"&scope="+
+				url.PathEscape((c.PostForm("scope"))))
+	*/
 }
 
 func (ah *AuthHandler) Authenticate(c *gin.Context) {
-	authState := newAuthenticationState().
-		Set(USER, models.UserAccount{Email: c.PostForm("email")}).
-		Set(CLIENT, models.Client{Id: c.PostForm("client_id")}).
-		Set(SCOPE, strings.Split(c.PostForm("scope"), "")).
-		Set(STATE, c.PostForm("state")).
-		Set(PASSWORD, c.PostForm("password"))
-
-	if userAccount, err := ah.db.GetUserByEmail(c.PostForm("email")); err != nil || userAccount == nil {
-		ah.LoginPageError(c, ERR_CREDENTIALS)
+	if dbAccount, err := ah.db.GetUserByEmail(c.PostForm("email")); err != nil || dbAccount == nil {
+		log.Debug("Failed to get user by email: %s", err)
+		ah.LoginPageError(c, "user not found")
 		return
 	} else {
-		if !authState.IsPasswordValid(USER, userAccount.Password) {
-			ah.LoginPageError(c, ERR_CREDENTIALS)
+		authState := newAuthenticationState().
+			SetUser(*dbAccount).
+			SetScope(strings.Split(c.PostForm("scope"), "-")).
+			SetState(c.PostForm("state"))
+
+		if !authState.IsUserPasswordValid(c.PostForm("password")) {
+			ah.LoginPageError(c, "password is invalid")
 			return
 		}
-		authState.Set(USER, *userAccount)
+
 		dbClient, err := ah.db.GetClientById(c.PostForm("client_id"))
 		if err != nil || dbClient == nil {
-			ah.LoginPageError(c, ERR_CLIENT_ID)
+			c.JSON(http.StatusUnauthorized, err)
+			//c.JSON(http.StatusUnauthorized, gin.H{"error": "no client found with id: " + c.PostForm("client_id")})
 			return
 		}
-		authState.Set(CLIENT, *dbClient)
+		authState.SetClient(*dbClient)
 
 		ah.addPendingAuthorization(authState)
-		c.Redirect(http.StatusFound, authState.getClientRedirectUrl())
+		c.JSON(http.StatusOK, gin.H{"message": "Authorization code generated"})
+		//c.Redirect(http.StatusFound, authState.getClientRedirectUrl())
 	}
 }
 
@@ -223,18 +241,18 @@ func (ah *AuthHandler) IssueToken(c *gin.Context) {
 			return
 		}
 
-		if !authState.IsPasswordValid(CLIENT, clientSecret) || clientId != authState.client.Id {
+		if !authState.IsClientSecretValid(clientSecret) || clientId != authState.client.Id {
 			unauthorized(c)
 			return
 		}
 
-		accessToken, err := utils.GenerateToken(authState.getUserId(), "access", 3600)
+		accessToken, err := GenerateToken(authState.getUserId(), "access", 3600)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate access token"})
 			return
 		}
 
-		refreshToken, err := utils.GenerateToken(authState.getUserId(), "refresh", 7200)
+		refreshToken, err := GenerateToken(authState.getUserId(), "refresh", 7200)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate refresh token"})
 			return
@@ -262,7 +280,7 @@ func (ah *AuthHandler) ValidateToken(c *gin.Context) {
 	// Remove the "Bearer " prefix from the token string
 	tokenString = strings.Replace(tokenString, "Bearer ", "", 1)
 
-	if userId, err := utils.ValidateToken(tokenString); err != nil {
+	if userId, err := ValidateToken(tokenString); err != nil {
 		unauthorized(c)
 		return
 	} else {

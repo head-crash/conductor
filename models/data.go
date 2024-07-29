@@ -3,7 +3,7 @@ package models
 type Client struct {
 	Id          string `json:"client_id"`
 	Secret      string `json:"secret"`
-	RedirectUrl string `json:"redirectUrl"`
+	RedirectUrl string `json:"redirect_url"`
 }
 
 type Role string

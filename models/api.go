@@ -15,3 +15,13 @@ type CreateUserRequestBody struct {
 	Password string `json:"password"`
 	Email    string `json:"email"`
 }
+
+type CreateClientRequestBody struct {
+	Secret      string `json:"secret"`
+	RedirectUrl string `json:"redirect_url"`
+}
+
+type CreateClientResponseBody struct {
+	ClientId    string `json:"client_id"`
+	RedirectUrl string `json:"redirect_url"`
+}
