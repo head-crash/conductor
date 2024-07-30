@@ -3,9 +3,9 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/fastjack-it/conductor/models"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/head-crash/conductor/models"
 	"golang.org/x/crypto/bcrypt"
 )
 

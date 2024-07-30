@@ -3,8 +3,8 @@ package config
 import (
 	"os"
 
-	"github.com/fastjack-it/conductor/logger"
-	"github.com/fastjack-it/conductor/utils"
+	"github.com/head-crash/conductor/logger"
+	"github.com/head-crash/conductor/utils"
 	"github.com/joho/godotenv"
 )
 

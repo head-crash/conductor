@@ -3,10 +3,10 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/fastjack-it/conductor/models"
-	"github.com/fastjack-it/conductor/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/head-crash/conductor/models"
+	"github.com/head-crash/conductor/utils"
 	"golang.org/x/crypto/bcrypt"
 )
 

@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/fastjack-it/conductor/config"
-	"github.com/fastjack-it/conductor/models"
+	"github.com/head-crash/conductor/config"
+	"github.com/head-crash/conductor/models"
 	_ "github.com/mattn/go-sqlite3"
 )
 

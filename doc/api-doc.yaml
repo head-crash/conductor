@@ -1,15 +1,24 @@
 openapi: 3.0.0
 info:
-  title: API Dokumentation
-  description: Dies ist die API Dokumentation für die Anwendung.
+  title: API Documentation
+  description: This is the REST API documentation for the conductor oauth server.
   version: 1.0.0
+tags: 
+  - name: oauth
+    description: oauth 2.0 operations
+  - name: users
+    description: user related operations
+  - name: clients
+    description: client related operations
 servers:
   - url: http://localhost:8080
-    description: Lokaler Server
+    description: Local server
 paths:
   /oauth/token:
     get:
-      summary: Token anfordern
+      summary: Request token
+      tags:
+        - oauth
       parameters:
         - name: authorization_code
           in: query
@@ -20,20 +29,22 @@ paths:
         - basicAuth: []
       responses:
         "200":
-          description: Erfolgreiche Antwort
+          description: Successful response
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/TokenResponseBody"
         "401":
-          description: Ungültige Anmeldeinformationen
+          description: Invalid credentials
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponseBody"
   /oauth/login:
     post:
-      summary: Benutzer authentifizieren
+      summary: Authenticate user
+      tags:
+        - oauth
       requestBody:
         content:
           application/x-www-form-urlencoded:
@@ -41,30 +52,34 @@ paths:
               $ref: "#/components/schemas/LoginRequestBody"
       responses:
         "302":
-          description: Erfolgreiche Authentifizierung und Weiterleitung
+          description: Successful authentication and redirection
           headers:
             Location:
-              description: URL der Weiterleitung
+              description: URL of the redirection
               schema:
                 type: string
         "401":
-          description: Ungültige Anmeldeinformationen
+          description: Invalid credentials
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponseBody"
     get:
-      summary: Login-Seite anzeigen
+      summary: Display login page
+      tags:
+        - oauth
       responses:
         "200":
-          description: Login-Seite erfolgreich angezeigt
+          description: Login page displayed successfully
           content:
             text/html:
               schema:
                 type: string
   /users:
     post:
-      summary: Benutzer erstellen
+      summary: Create user
+      tags:
+        - users
       requestBody:
         content:
           application/json:
@@ -72,13 +87,13 @@ paths:
               $ref: "#/components/schemas/CreateUserRequestBody"
       responses:
         "201":
-          description: Benutzer erfolgreich erstellt
+          description: User created successfully
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/UserResponseBody"
         "400":
-          description: Ungültige Eingabe
+          description: Invalid input
           content:
             application/json:
               schema:
@@ -86,7 +101,8 @@ paths:
   /clients:
     post:
       summary: Create a new client
-      operationId: createClient
+      tags:
+        - clients
       requestBody:
         description: Request body for creating a new client
         required: true

@@ -1,4 +1,4 @@
-module github.com/fastjack-it/conductor
+module github.com/head-crash/conductor
 
 go 1.22.5
 

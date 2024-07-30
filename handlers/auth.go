@@ -8,11 +8,11 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 
-	"github.com/fastjack-it/conductor/config"
-	"github.com/fastjack-it/conductor/logger"
-	"github.com/fastjack-it/conductor/models"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/head-crash/conductor/config"
+	"github.com/head-crash/conductor/logger"
+	"github.com/head-crash/conductor/models"
 	"golang.org/x/crypto/bcrypt"
 )
 

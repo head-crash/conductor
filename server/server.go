@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/fastjack-it/conductor/handlers"
-	"github.com/fastjack-it/conductor/logger"
-	"github.com/fastjack-it/conductor/models"
 	"github.com/gin-gonic/gin"
+	"github.com/head-crash/conductor/handlers"
+	"github.com/head-crash/conductor/logger"
+	"github.com/head-crash/conductor/models"
 )
 
 type RestServer struct {
