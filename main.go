@@ -2,9 +2,9 @@ package main
 
 import (
 	"github.com/head-crash/conductor/config"
-	"github.com/head-crash/conductor/logger"
 	"github.com/head-crash/conductor/persistence"
 	"github.com/head-crash/conductor/server"
+	"github.com/head-crash/logger"
 )
 
 var log = logger.Default

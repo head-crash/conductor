@@ -3,8 +3,8 @@ package config
 import (
 	"os"
 
-	"github.com/head-crash/conductor/logger"
 	"github.com/head-crash/conductor/utils"
+	"github.com/head-crash/logger"
 	"github.com/joho/godotenv"
 )
 
@@ -45,7 +45,7 @@ func LoadConfig() {
 	Port = getEnvOrDef("PORT", DefaultString("8080"))
 	EndpointUrl = getEnvOrDef("ENDPOINT_URL", DefaultString("http://localhost:"+Port))
 	AuthTimeOut = StrToInt(getEnvOrDef("AUTH_TIMEOUT_SECONDS", DefaultString("300")))
-	Loglevel = logger.Loglevel(getEnvOrDef("LOG_LEVEL", DefaultString("DEBUG")))
+	Loglevel = logger.Loglevel((getEnvOrDef("LOG_LEVEL", DefaultString("DEBUG"))))
 
 	// Set log level
 	log.SetLogLevel(Loglevel)

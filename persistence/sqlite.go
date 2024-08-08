@@ -1,15 +1,16 @@
 package persistence
 
 import (
-	"context"
 	"database/sql"
 	"fmt"
-	"log"
 
 	"github.com/head-crash/conductor/config"
 	"github.com/head-crash/conductor/models"
+	"github.com/head-crash/logger"
 	_ "github.com/mattn/go-sqlite3"
 )
+
+var log = logger.Default
 
 type Sqlite struct {
 	client *sql.DB
@@ -46,45 +47,37 @@ func NewSqliteDb() *Sqlite {
 }
 
 func (db *Sqlite) GetUserById(userID string) (*models.UserAccount, error) {
-	ctx := context.Background()
 	user := &models.UserAccount{}
 	query := `
 		SELECT uuid, password, email, role
 		FROM users
 		WHERE uuid=?;`
-	err := db.client.QueryRowContext(ctx, query, userID).Scan(&user.Uuid, &user.Password, &user.Email, &user.Role)
-	switch {
-	case err == sql.ErrNoRows:
-		return nil, nil
-	case err != nil:
-		return nil, fmt.Errorf("query error: %v", err)
-	default:
-		return user, nil
+	err := db.client.QueryRow(query, userID).
+		Scan(&user.Uuid, &user.Password, &user.Email, &user.Role)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("user table query error: %v", err)
 	}
+	return user, nil
 }
 
 func (db *Sqlite) GetUserByEmail(email string) (*models.UserAccount, error) {
+	user := &models.UserAccount{}
 	query := `
 		SELECT uuid, password, email, role
 		FROM users
-		WHERE email='?';`
-	if row, err := db.client.Query(query, email); err != nil {
-		return nil, fmt.Errorf("query error: %v", err)
-	} else {
-		user := &models.UserAccount{}
-		if err = row.Scan(&user.Uuid, &user.Password, &user.Email, &user.Role); err != nil {
-			return nil, fmt.Errorf("query error: %v", err)
+		WHERE email=?;`
+	err := db.client.QueryRow(query, email).
+		Scan(&user.Uuid, &user.Password, &user.Email, &user.Role)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
 		}
-		return user, nil
+		return nil, fmt.Errorf("user table query error: %v", err)
 	}
-
-	// switch {
-	// case err == sql.ErrNoRows:
-	// 	return nil, fmt.Errorf("query error: %v", err)
-	// case err != nil:
-	// 	return nil, fmt.Errorf("query error: %v", err)
-	// default:
-	// 	return user, nil
+	return user, nil
 }
 
 func (db *Sqlite) CreateUser(u *models.UserAccount) error {
@@ -113,22 +106,21 @@ func (db *Sqlite) DeleteUser(userID string) error {
 }
 
 func (db *Sqlite) GetClientById(clientId string) (*models.Client, error) {
-	ctx := context.Background()
 	query := `
 		SELECT clientId, secret, redirectUrl
 		FROM clients
-		WHERE clientId='?';`
+		WHERE clientId=?;`
 	client := &models.Client{}
-	err := db.client.QueryRowContext(ctx, query, clientId).Scan(&client.Id, &client.Secret, &client.RedirectUrl)
-	return client, err
-	// switch {
-	// case err == sql.ErrNoRows:
-	// 	return nil, fmt.Errorf("query error: %v", err)
-	// 	//return nil, nil
-	// case err != nil:
-	// 	return nil, fmt.Errorf("query error: %v", err)
-	// default:
-	// 	return client, nil
+	err := db.client.QueryRow(query, clientId).
+		Scan(&client.Id, &client.Secret, &client.RedirectUrl)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			log.Error("No rows found for client: %s with error: %s", clientId, err)
+			return nil, nil
+		}
+		return nil, fmt.Errorf("client table query error: %v", err)
+	}
+	return client, nil
 }
 
 func (db *Sqlite) CreateClient(c *models.Client) error {

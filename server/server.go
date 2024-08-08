@@ -6,8 +6,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/head-crash/conductor/handlers"
-	"github.com/head-crash/conductor/logger"
 	"github.com/head-crash/conductor/models"
+	"github.com/head-crash/logger"
 )
 
 type RestServer struct {
@@ -53,6 +53,16 @@ func CustomLogger(logger *logger.Logger) gin.HandlerFunc {
 		c.Next()
 		end := time.Now()
 		latency := end.Sub(start)
+		// logger.Debug(fmt.Sprintf("[CUSTOM LOG] %v | %3d | %13v | %15s |%-7s %#v\n%s",
+		// 	end.Format("2006/01/02 - 15:04:05"),
+		// 	c.Writer.Status(),
+		// 	latency,
+		// 	c.ClientIP(),
+		// 	c.Request.Method,
+		// 	c.Request.URL.Path,
+		// 	c.Errors.String(),
+		// ))
+
 		// Output standard Gin log
 		gin.DefaultWriter.Write([]byte(
 			fmt.Sprintf("[GIN LOG] %v | %3d | %13v | %15s |%-7s %#v\n%s",

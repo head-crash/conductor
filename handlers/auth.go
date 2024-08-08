@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -11,8 +12,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/head-crash/conductor/config"
-	"github.com/head-crash/conductor/logger"
 	"github.com/head-crash/conductor/models"
+	"github.com/head-crash/logger"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -185,48 +186,45 @@ func (ah *AuthHandler) LoginPageError(c *gin.Context, m ErrorMessage) {
 	} else {
 		errorMessage = string(m)
 	}
-	c.JSON(http.StatusUnauthorized, gin.H{"error": errorMessage})
-	/*
-		c.Redirect(http.StatusFound,
-			"/oauth/login?error="+
-				url.PathEscape(errorMessage)+
-				"&state="+
-				url.PathEscape(c.PostForm("state"))+
-				"&client_id="+
-				url.PathEscape(c.PostForm("client_id"))+
-				"&scope="+
-				url.PathEscape((c.PostForm("scope"))))
-	*/
+	c.Redirect(http.StatusFound,
+		"/oauth/login?error="+
+			url.PathEscape(errorMessage)+
+			"&state="+
+			url.PathEscape(c.PostForm("state"))+
+			"&client_id="+
+			url.PathEscape(c.PostForm("client_id"))+
+			"&scope="+
+			url.PathEscape((c.PostForm("scope"))))
 }
 
 func (ah *AuthHandler) Authenticate(c *gin.Context) {
-	if dbAccount, err := ah.db.GetUserByEmail(c.PostForm("email")); err != nil || dbAccount == nil {
-		log.Debug("Failed to get user by email: %s", err)
-		ah.LoginPageError(c, "user not found")
+	dbAccount, err := ah.db.GetUserByEmail(c.PostForm("email"))
+	if err != nil || dbAccount == nil {
+		log.Debug("Invalid email address: %s", c.PostForm("email"))
+		ah.LoginPageError(c, "Login failed! Invalid credentials.")
 		return
-	} else {
-		authState := newAuthenticationState().
-			SetUser(*dbAccount).
-			SetScope(strings.Split(c.PostForm("scope"), "-")).
-			SetState(c.PostForm("state"))
-
-		if !authState.IsUserPasswordValid(c.PostForm("password")) {
-			ah.LoginPageError(c, "password is invalid")
-			return
-		}
-
-		dbClient, err := ah.db.GetClientById(c.PostForm("client_id"))
-		if err != nil || dbClient == nil {
-			c.JSON(http.StatusUnauthorized, err)
-			//c.JSON(http.StatusUnauthorized, gin.H{"error": "no client found with id: " + c.PostForm("client_id")})
-			return
-		}
-		authState.SetClient(*dbClient)
-
-		ah.addPendingAuthorization(authState)
-		c.JSON(http.StatusOK, gin.H{"message": "Authorization code generated"})
-		//c.Redirect(http.StatusFound, authState.getClientRedirectUrl())
 	}
+	authState := newAuthenticationState().
+		SetUser(*dbAccount).
+		SetScope(strings.Split(c.PostForm("scope"), "-")).
+		SetState(c.PostForm("state"))
+
+	if !authState.IsUserPasswordValid(c.PostForm("password")) {
+		log.Debug("Invalid password for user: %s", c.PostForm("email"))
+		ah.LoginPageError(c, "Login failed! Invalid credentials.")
+		return
+	}
+
+	dbClient, err := ah.db.GetClientById(c.PostForm("client_id"))
+	if err != nil || dbClient == nil {
+		log.Debug("Failed to get client by id: %s", err)
+		ah.LoginPageError(c, "Login failed! Invalid credentials.")
+		return
+	}
+	authState.SetClient(*dbClient)
+
+	ah.addPendingAuthorization(authState)
+	c.Redirect(http.StatusFound, authState.getClientRedirectUrl())
 }
 
 func (ah *AuthHandler) IssueToken(c *gin.Context) {
