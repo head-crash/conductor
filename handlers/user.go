@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"net/url"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -60,6 +61,31 @@ func (u *User) setEncryptedPassword(password string) *User {
 	return u
 }
 
+func (uh *UserHandler) NewUserFromRegistration(email, password string) *User {
+	newUser := NewUser().
+		SetEmail(email).
+		setEncryptedPassword(password).
+		SetRole(string(models.USER)).
+		SetId(uuid.New().String())
+
+	return newUser
+}
+
+func (uh *UserHandler) CreateUserFromForm(c *gin.Context) {
+	email := c.PostForm("email")
+	password := c.PostForm("password")
+	if email == "" || password == "" {
+		c.Redirect(http.StatusFound, "/oauth/login?error="+url.PathEscape("Email and password are required"))
+		return
+	}
+	newUser := uh.NewUserFromRegistration(email, password)
+	if err := uh.db.CreateUser(newUser.UserAccount); err != nil {
+		c.Redirect(http.StatusFound, "/oauth/login?register=true&error="+url.PathEscape("a user with that email already exists"))
+		return
+	}
+	c.Redirect(http.StatusFound, "/oauth/login")
+}
+
 func (uh *UserHandler) Create(c *gin.Context) {
 	var createUserRequest models.CreateUserRequestBody
 	if err := c.ShouldBindJSON(&createUserRequest); err != nil {
@@ -77,6 +103,7 @@ func (uh *UserHandler) Create(c *gin.Context) {
 		c.JSON(http.StatusConflict, gin.H{"error": "A user with that email already exists"})
 		return
 	}
+
 	c.JSON(http.StatusCreated, gin.H{"message": "User created"})
 }
 

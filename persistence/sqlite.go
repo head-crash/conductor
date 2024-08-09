@@ -146,6 +146,7 @@ func (db *Sqlite) GetClientById(clientId string) (*models.Client, error) {
 		FROM clients
 		WHERE clientId=?;`
 	client := &models.Client{}
+	log.Debug("Querying for client: %s", clientId)
 	err := db.client.QueryRow(query, clientId).
 		Scan(&client.Id, &client.Secret, &client.RedirectUrl)
 	if err != nil {
