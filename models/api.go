@@ -25,3 +25,14 @@ type CreateClientResponseBody struct {
 	ClientId    string `json:"client_id"`
 	RedirectUrl string `json:"redirect_url"`
 }
+
+type UserAccountOutput struct {
+	Uuid  string `json:"uuid"`
+	Email string `json:"email"`
+	Role  Role   `json:"role"`
+}
+
+type ClientOutput struct {
+	Id          string `json:"client_id"`
+	RedirectUrl string `json:"redirect_url"`
+}

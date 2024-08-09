@@ -46,13 +46,13 @@ func NewSqliteDb() *Sqlite {
 	return &DB
 }
 
-func (db *Sqlite) GetUserById(userID string) (*models.UserAccount, error) {
+func (db *Sqlite) GetUserById(userId string) (*models.UserAccount, error) {
 	user := &models.UserAccount{}
 	query := `
 		SELECT uuid, password, email, role
 		FROM users
 		WHERE uuid=?;`
-	err := db.client.QueryRow(query, userID).
+	err := db.client.QueryRow(query, userId).
 		Scan(&user.Uuid, &user.Password, &user.Email, &user.Role)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -105,6 +105,41 @@ func (db *Sqlite) DeleteUser(userID string) error {
 	return err
 }
 
+func (db *Sqlite) GetUsers(offset, limit int) ([]*models.UserAccountOutput, error) {
+	if offset < 0 {
+		offset = 0
+	}
+	if limit <= 0 {
+		limit = 100
+	}
+
+	query := `
+	SELECT uuid, email, role
+	FROM users
+	LIMIT ? OFFSET ?;`
+	rows, err := db.client.Query(query, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("users table query error: %v", err)
+	}
+	defer rows.Close()
+
+	var users []*models.UserAccountOutput
+	for rows.Next() {
+		user := &models.UserAccountOutput{}
+		err := rows.Scan(&user.Uuid, &user.Email, &user.Role)
+		if err != nil {
+			return nil, fmt.Errorf("error scanning user row: %v", err)
+		}
+		users = append(users, user)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration error: %v", err)
+	}
+
+	return users, nil
+}
+
 func (db *Sqlite) GetClientById(clientId string) (*models.Client, error) {
 	query := `
 		SELECT clientId, secret, redirectUrl
@@ -146,4 +181,39 @@ func (db *Sqlite) DeleteClient(clientID string) error {
 	WHERE clientId = ?;`
 	_, err := db.client.Exec(query, clientID)
 	return err
+}
+
+func (db *Sqlite) GetClients(offset, limit int) ([]*models.ClientOutput, error) {
+	if offset < 0 {
+		offset = 0
+	}
+	if limit <= 0 {
+		limit = 100
+	}
+
+	query := `
+	SELECT clientId, redirectUrl
+	FROM clients
+	LIMIT ? OFFSET ?;`
+	rows, err := db.client.Query(query, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("clients table query error: %v", err)
+	}
+	defer rows.Close()
+
+	var clients []*models.ClientOutput
+	for rows.Next() {
+		client := &models.ClientOutput{}
+		err := rows.Scan(&client.Id, &client.RedirectUrl)
+		if err != nil {
+			return nil, fmt.Errorf("error scanning client row: %v", err)
+		}
+		clients = append(clients, client)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration error: %v", err)
+	}
+
+	return clients, nil
 }

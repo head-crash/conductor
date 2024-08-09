@@ -52,3 +52,7 @@ func StringToIntenger(p StrToIntParams) int {
 	}
 	return i
 }
+
+func StrToInt(number string) int {
+	return StringToIntenger(StrToIntParams{Value: number, Fallback: "-1"})
+}

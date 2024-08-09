@@ -44,16 +44,41 @@ func GenerateToken(userId, tokenType string, expiresIn int64) (string, error) {
 	return token.SignedString([]byte(config.SecretKey))
 }
 
-func ValidateToken(tokenString string) (string, error) {
-	if token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+func GetUserIdFromToken(tokenString string) (string, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		return []byte(config.SecretKey), nil
-	}); err != nil {
+	})
+	if err != nil {
 		return "", err
-	} else if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		return claims["sub"].(string), nil
-	} else {
-		return "", nil
 	}
+	if !token.Valid {
+		return "", fmt.Errorf("invalid token")
+	}
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return "", fmt.Errorf("failed to parse claims")
+	}
+
+	return claims["sub"].(string), nil
+}
+
+func GetTokenResponse(userId string) (*models.TokenResponseBody, error) {
+	accessToken, err := GenerateToken(userId, "access", 3600)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate access token: %w", err)
+	}
+
+	refreshToken, err := GenerateToken(userId, "refresh", 7200)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate refresh token: %w", err)
+	}
+
+	return &models.TokenResponseBody{
+		AccessToken:  accessToken,
+		TokenType:    "bearer",
+		RefreshToken: refreshToken,
+		Expires:      time.Now().Add(time.Duration(config.ExpirySeconds) * time.Second),
+	}, nil
 }
 
 func NewAuthHandler(db models.Database) *AuthHandler {
@@ -147,6 +172,37 @@ func newAuthenticationState() *AuthenticationState {
 
 func unauthorized(c *gin.Context) {
 	c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+	c.Abort()
+}
+
+func (ah *AuthHandler) ValidateAuthorization(c *gin.Context) {
+	authHeader := c.GetHeader("Authorization")
+	if authHeader == "" {
+		unauthorized(c)
+		return
+	}
+
+	tokenString := strings.Replace(authHeader, "Bearer ", "", 1)
+	userId, err := GetUserIdFromToken(tokenString)
+	if err != nil {
+		unauthorized(c)
+		return
+	}
+
+	dbUser, err := ah.db.GetUserById(userId)
+	if err != nil || dbUser == nil {
+		unauthorized(c)
+		return
+	}
+
+	user := NewUser().
+		SetEmail(dbUser.Email).
+		SetPassword(dbUser.Password).
+		SetRole(string(dbUser.Role)).
+		SetId(dbUser.Uuid)
+
+	c.Set("user", user)
+	c.Next()
 }
 
 func (ah *AuthHandler) addPendingAuthorization(authState *AuthenticationState) {
@@ -197,7 +253,7 @@ func (ah *AuthHandler) LoginPageError(c *gin.Context, m ErrorMessage) {
 			url.PathEscape((c.PostForm("scope"))))
 }
 
-func (ah *AuthHandler) Authenticate(c *gin.Context) {
+func (ah *AuthHandler) AuthenticateOauth(c *gin.Context) {
 	dbAccount, err := ah.db.GetUserByEmail(c.PostForm("email"))
 	if err != nil || dbAccount == nil {
 		log.Debug("Invalid email address: %s", c.PostForm("email"))
@@ -227,6 +283,46 @@ func (ah *AuthHandler) Authenticate(c *gin.Context) {
 	c.Redirect(http.StatusFound, authState.getClientRedirectUrl())
 }
 
+func (ah *AuthHandler) Authenticate(c *gin.Context) {
+	email, pass, ok := c.Request.BasicAuth()
+	if !ok || email == "" || pass == "" {
+		unauthorized(c)
+		return
+	}
+
+	dbUser, err := ah.db.GetUserByEmail(email)
+	if err != nil || dbUser == nil {
+		log.Debug("Invalid email address (local login): %s", email)
+		unauthorized(c)
+		return
+	}
+
+	adminUser := NewUser().
+		SetEmail(dbUser.Email).
+		SetPassword(dbUser.Password).
+		SetRole(string(dbUser.Role)).
+		SetId(dbUser.Uuid)
+
+	authState := newAuthenticationState().
+		SetUser(*adminUser.UserAccount).
+		SetScope([]string{"admin"})
+
+	if !authState.IsUserPasswordValid(pass) {
+		log.Debug("Invalid password for user (logal login): %s", email)
+		unauthorized(c)
+		return
+	}
+
+	response, err := GetTokenResponse(authState.getUserId())
+	if err != nil {
+		log.Error("Failed to generate token (local login): %s", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+		return
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
 func (ah *AuthHandler) IssueToken(c *gin.Context) {
 	if clientId, clientSecret, ok := c.Request.BasicAuth(); !ok {
 		unauthorized(c)
@@ -244,23 +340,11 @@ func (ah *AuthHandler) IssueToken(c *gin.Context) {
 			return
 		}
 
-		accessToken, err := GenerateToken(authState.getUserId(), "access", 3600)
+		response, err := GetTokenResponse(authState.getUserId())
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate access token"})
+			log.Error("Failed to generate token: %s", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
 			return
-		}
-
-		refreshToken, err := GenerateToken(authState.getUserId(), "refresh", 7200)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate refresh token"})
-			return
-		}
-
-		response := models.TokenResponseBody{
-			AccessToken:  accessToken,
-			TokenType:    "bearer",
-			RefreshToken: refreshToken,
-			Expires:      time.Now().Add(time.Duration(config.ExpirySeconds) * time.Second),
 		}
 
 		ah.deletePendingAuthorization(authorizationCode)
@@ -278,7 +362,7 @@ func (ah *AuthHandler) ValidateToken(c *gin.Context) {
 	// Remove the "Bearer " prefix from the token string
 	tokenString = strings.Replace(tokenString, "Bearer ", "", 1)
 
-	if userId, err := ValidateToken(tokenString); err != nil {
+	if userId, err := GetUserIdFromToken(tokenString); err != nil {
 		unauthorized(c)
 		return
 	} else {

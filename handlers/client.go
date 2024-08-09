@@ -79,3 +79,24 @@ func (ch *ClientHandler) Create(c *gin.Context) {
 		c.JSON(http.StatusCreated, newClient.ApiClientResponse())
 	}
 }
+
+func (ch *ClientHandler) GetClients(c *gin.Context) {
+	limit := utils.StrToInt(c.DefaultQuery("limit", "100"))
+	offset := utils.StrToInt(c.DefaultQuery("offset", "0"))
+	clients, err := ch.db.GetClients(offset, limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"clients": clients})
+}
+
+func (ch *ClientHandler) Delete(c *gin.Context) {
+	clientId := c.Param("clientId")
+	if err := ch.db.DeleteClient(clientId); err != nil {
+		log.Error("Failed to delete client: %s", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Client deleted"})
+}
