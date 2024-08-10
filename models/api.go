@@ -4,11 +4,19 @@ import (
 	"time"
 )
 
+type TokenResponse struct {
+	TokenType string    `json:"token_type"`
+	Expires   time.Time `json:"expires_in"`
+}
 type TokenResponseBody struct {
-	AccessToken  string    `json:"access_token"`
-	TokenType    string    `json:"token_type"`
-	RefreshToken string    `json:"refresh_token"`
-	Expires      time.Time `json:"expires_in"`
+	*TokenResponse
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+}
+
+type RenewTokenRequestBody struct {
+	*TokenResponse
+	AccessToken string `json:"access_token"`
 }
 
 type CreateUserRequestBody struct {

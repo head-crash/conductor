@@ -6,6 +6,7 @@ func (s *RestServer) SetRoutes() {
 		SetRoute("POST", "/oauth/login", s.Auth.AuthenticateOauth).
 		SetRoute("GET", "/oauth/login", s.Auth.LoginPage).
 		SetRoute("POST", "/auth/login", s.Auth.Authenticate).
+		SetRoute("GET", "/auth/renew", s.Auth.RenewToken).
 		SetRoute("GET", "/users", s.Auth.ValidateAuthorization, s.User.IsAdmin, s.User.GetUsers).
 		SetRoute("POST", "/users", s.User.Create).
 		SetRoute("POST", "/users/register", s.User.CreateUserFromForm).

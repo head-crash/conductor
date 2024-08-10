@@ -33,18 +33,19 @@ type AuthHandler struct {
 
 var log = logger.Default
 
-func GenerateToken(userId, tokenType string, expiresIn int64) (string, error) {
-	claims := &jwt.StandardClaims{
-		ExpiresAt: time.Now().Add(time.Duration(expiresIn) * time.Second).Unix(),
-		Subject:   userId,
-		Issuer:    config.EndpointUrl,
+func GenerateToken(userId string, tokenType TokenType, expiresIn int64) (string, error) {
+	claims := jwt.MapClaims{
+		"exp": time.Now().Add(time.Duration(expiresIn) * time.Second).Unix(),
+		"sub": userId,
+		"iss": config.EndpointUrl,
+		"typ": tokenType,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(config.SecretKey))
 }
 
-func GetUserIdFromToken(tokenString string) (string, error) {
+func GetUserIdFromAccessToken(tokenString string) (string, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		return []byte(config.SecretKey), nil
 	})
@@ -58,26 +59,57 @@ func GetUserIdFromToken(tokenString string) (string, error) {
 	if !ok {
 		return "", fmt.Errorf("failed to parse claims")
 	}
+	if claims["typ"] != string(ACCESS_TOKEN) {
+		log.Debug("Token is not of type refresh")
+		return "", fmt.Errorf("token is not of type refresh")
+	}
+
+	return claims["sub"].(string), nil
+}
+
+func GetUserIdFromRefreshToken(tokenString string) (string, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		return []byte(config.SecretKey), nil
+	})
+	if err != nil {
+		log.Debug("Failed to parse token: %s", err)
+		return "", err
+	}
+	if !token.Valid {
+		log.Debug("Invalid token")
+		return "", fmt.Errorf("invalid token")
+	}
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		log.Debug("Failed to parse claims")
+		return "", fmt.Errorf("failed to parse claims")
+	}
+	if claims["typ"] != string(REFRESH_TOKEN) {
+		log.Debug("Token is not of type refresh")
+		return "", fmt.Errorf("token is not of type refresh")
+	}
 
 	return claims["sub"].(string), nil
 }
 
 func GetTokenResponse(userId string) (*models.TokenResponseBody, error) {
-	accessToken, err := GenerateToken(userId, "access", 3600)
+	accessToken, err := GenerateToken(userId, ACCESS_TOKEN, 3600)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate access token: %w", err)
 	}
 
-	refreshToken, err := GenerateToken(userId, "refresh", 7200)
+	refreshToken, err := GenerateToken(userId, REFRESH_TOKEN, 7200)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate refresh token: %w", err)
 	}
 
 	return &models.TokenResponseBody{
-		AccessToken:  accessToken,
-		TokenType:    "bearer",
+		AccessToken: accessToken,
+		TokenResponse: &models.TokenResponse{
+			TokenType: "bearer",
+			Expires:   time.Now().Add(time.Duration(config.ExpirySeconds) * time.Second),
+		},
 		RefreshToken: refreshToken,
-		Expires:      time.Now().Add(time.Duration(config.ExpirySeconds) * time.Second),
 	}, nil
 }
 
@@ -183,7 +215,7 @@ func (ah *AuthHandler) ValidateAuthorization(c *gin.Context) {
 	}
 
 	tokenString := strings.Replace(authHeader, "Bearer ", "", 1)
-	userId, err := GetUserIdFromToken(tokenString)
+	userId, err := GetUserIdFromAccessToken(tokenString)
 	if err != nil {
 		unauthorized(c)
 		return
@@ -362,10 +394,44 @@ func (ah *AuthHandler) ValidateToken(c *gin.Context) {
 	// Remove the "Bearer " prefix from the token string
 	tokenString = strings.Replace(tokenString, "Bearer ", "", 1)
 
-	if userId, err := GetUserIdFromToken(tokenString); err != nil {
+	if userId, err := GetUserIdFromAccessToken(tokenString); err != nil {
 		unauthorized(c)
 		return
 	} else {
 		c.JSON(http.StatusOK, gin.H{"user_id": userId})
 	}
+}
+
+func (ah *AuthHandler) RenewToken(c *gin.Context) {
+	tokenString := c.Request.Header.Get("Authorization")
+	if tokenString == "" {
+		unauthorized(c)
+		return
+	}
+
+	// Remove the "Bearer " prefix from the token string
+	tokenString = strings.Replace(tokenString, "Bearer ", "", 1)
+
+	userId, err := GetUserIdFromRefreshToken(tokenString)
+	if err != nil {
+		unauthorized(c)
+		return
+	}
+
+	response, err := GetTokenResponse(userId)
+	if err != nil {
+		log.Error("Failed to generate token: %s", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+		return
+	}
+
+	renewToken := &models.RenewTokenRequestBody{
+		AccessToken: response.AccessToken,
+		TokenResponse: &models.TokenResponse{
+			TokenType: response.TokenType,
+			Expires:   response.Expires,
+		},
+	}
+
+	c.JSON(http.StatusOK, renewToken)
 }
