@@ -44,3 +44,7 @@ type ClientOutput struct {
 	Id          string `json:"client_id"`
 	RedirectUrl string `json:"redirect_url"`
 }
+
+type SetUserPasswordRequestBody struct {
+	Password string `json:"password"`
+}

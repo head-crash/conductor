@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -113,6 +114,15 @@ func GetTokenResponse(userId string) (*models.TokenResponseBody, error) {
 	}, nil
 }
 
+func newAuthenticationCode() string {
+	authCode, err := bcrypt.GenerateFromPassword([]byte(uuid.New().String()), bcrypt.DefaultCost)
+	if err != nil {
+		log.Warn("Error encrypting authCode: %s -> fallback to decrypted authCode!", err)
+		return base64.URLEncoding.EncodeToString([]byte(uuid.New().String()))
+	}
+	return base64.URLEncoding.EncodeToString(authCode)
+}
+
 func NewAuthHandler(db models.Database) *AuthHandler {
 	return &AuthHandler{
 		pendingAuthorizations: make(map[string]*AuthenticationState),
@@ -127,6 +137,32 @@ func (ah *AuthHandler) StartCleanUp() *AuthHandler {
 			ah.cleanUpAuthState()
 		}
 	}()
+	return ah
+}
+
+func (ah *AuthHandler) Init() *AuthHandler {
+	// create admin user if no users exist
+	users, err := ah.db.GetUsers(0, 1)
+	if err != nil {
+		log.Error("init of AuthHandler faild: Failed to get users: %s", err)
+		return ah
+	}
+	if len(users) == 0 {
+		randPassword := base64.URLEncoding.EncodeToString(([]byte(uuid.New().String())))
+		adminUser := NewUser().
+			SetEmail(config.AdminUserName).
+			setEncryptedPassword(randPassword).
+			SetRole(string(models.ADMIN)).
+			SetId(uuid.New().String())
+
+		if err := ah.db.CreateUser(adminUser.UserAccount); err != nil {
+			log.Error("init of AuthHandler faild: Failed to create admin user: %s", err)
+			return ah
+		}
+
+		log.Info("Empty user db. Created admin user %s with password %s", config.AdminUserName, randPassword)
+		return ah
+	}
 	return ah
 }
 
@@ -198,7 +234,7 @@ func newAuthenticationState() *AuthenticationState {
 		state:             "",
 		scope:             []string{},
 		timestamp:         time.Now(),
-		authorizationCode: uuid.New().String(),
+		authorizationCode: newAuthenticationCode(),
 	}
 }
 
@@ -264,7 +300,7 @@ func (ah *AuthHandler) cleanUpAuthState() {
 }
 
 func (ah *AuthHandler) LoginPage(c *gin.Context) {
-	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(config.LoginHtml))
+	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(config.MainTemplate))
 }
 
 func (ah *AuthHandler) LoginPageError(c *gin.Context, m ErrorMessage) {

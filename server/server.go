@@ -20,7 +20,9 @@ type RestServer struct {
 func NewServer(db models.Database) *RestServer {
 	server := &RestServer{
 		gin.New(),
-		handlers.NewAuthHandler(db).StartCleanUp(),
+		handlers.NewAuthHandler(db).
+			Init().
+			StartCleanUp(),
 		handlers.NewUserHandler(db),
 		handlers.NewClientHandler(db),
 	}

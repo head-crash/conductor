@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/base64"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -67,7 +68,7 @@ func (ch *ClientHandler) Create(c *gin.Context) {
 		return
 	} else {
 		newClient := NewClient().
-			SetId(uuid.New().String()).
+			SetId(base64.URLEncoding.EncodeToString([]byte(uuid.New().String()))).
 			SetSecret(string(encryptedSecret)).
 			SetRedirectUrl(createClientRequest.RedirectUrl)
 

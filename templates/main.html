@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #121212;
+      color: #e0e0e0;
+    }
+
+    .error-message {
+      color: #fff;
+      background-color: rgba(139, 0, 0, 0.5);
+      /* Dunkelroter Hintergrund mit 50% Transparenz */
+      padding: 6px;
+      /* Reduziert um 40% von 10px */
+      margin-bottom: 12px;
+      /* Reduziert um 40% von 20px */
+      text-align: center;
+      animation: fadeOut 10s forwards;
+    }
+
+    .info-message {
+      color: #fff;
+      background-color: rgba(5, 167, 46, 0.548);
+      padding: 6px;
+      margin-bottom: 12px;
+      text-align: center;
+      animation: fadeOut 10s forwards;
+    }
+
+    @keyframes fadeOut {
+      0% {
+        opacity: 1;
+      }
+
+      100% {
+        opacity: 0;
+      }
+    }
+
+    .login-container.error,
+    .register-container.error,
+    .password-reset-container.error,
+    .new-password-container.error {
+      border: 2px solid #8B0000;
+      transition: border 1s ease;
+    }
+
+    .login-container.info,
+    .register-container.info,
+    .password-reset-container.info,
+    .new-password-container.info {
+      border: 2px solid #03a01d9d;
+      transition: border 1s ease;
+    }
+
+    .login-container,
+    .register-container,
+    .password-reset-container,
+    .new-password-container {
+      background-color: #1e1e1e;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+      width: 90%;
+      max-width: 400px;
+      box-sizing: border-box;
+    }
+
+    .login-container h2,
+    .register-container h2,
+    .password-reset-container h2,
+    .new-password-container h2 {
+      margin-bottom: 20px;
+      text-align: center;
+      color: rgb(255, 255, 255);
+      background-color: transparent;
+      padding: 10px;
+      border-radius: 4px;
+      font-size: 24px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-family: 'Arial', sans-serif;
+      border: 2px solid #ffffff;
+      margin-top: 0;
+      box-shadow: 0 4px 8px rgba(211, 211, 211, 0.5);
+      text-shadow: 2px 2px 4px rgba(211, 211, 211, 0.7);
+    }
+
+    .login-container h3,
+    .register-container h3,
+    .password-reset-container h3,
+    .new-password-container h3 {
+      margin-bottom: 20px;
+      text-align: center;
+      color: #e0e0e0;
+      font-size: 18px;
+      font-weight: 300;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .login-container input,
+    .register-container input,
+    .password-reset-container input,
+    .new-password-container input {
+      width: calc(100% - 20px);
+      padding: 10px;
+      margin: 10px 0;
+      border: 1px solid #333;
+      border-radius: 4px;
+      background-color: #333;
+      color: #e0e0e0;
+      transition: transform 0.3s ease;
+    }
+
+    .login-container input:hover,
+    .register-container input:hover,
+    .password-reset-container input:hover,
+    .new-password-container input:hover {
+      transform: scale(1.05);
+    }
+
+    .login-container button,
+    .register-container button,
+    .password-reset-container button,
+    .new-password-container button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      background-color: #8B0000;
+      border: none;
+      border-radius: 4px;
+      color: #fff;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .login-container button:hover,
+    .register-container button:hover,
+    .password-reset-container button:hover,
+    .new-password-container button:hover {
+      background-color: rgb(165, 34, 34);
+    }
+
+    .link-container {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 30px;
+    }
+
+    .register-link,
+    .reset-password-link {
+      color: #ffffff;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .register-link:hover,
+    .reset-password-link:hover {
+      text-decoration: underline;
+    }
+
+    @media (min-width: 768px) {
+
+      .login-container,
+      .register-container,
+      .reset-password-container,
+      .new-password-container {
+        width: 320px;
+      }
+    }
+  </style>
+</head>
+<script>
+  var errorMessageDivs = [];
+  var containers = [];
+  var infoMessageDivs
+
+  function addHiddenInput(elementId, name, value) {
+    if (value) {
+      const form = document.getElementById(elementId);
+      if (form) {
+        const hiddenInput = document.createElement("input");
+        hiddenInput.type = "hidden";
+        hiddenInput.name = name;
+        hiddenInput.value = value;
+        form.appendChild(hiddenInput);
+      } else {
+        console.error(`${elementId} not found`);
+      }
+    }
+  }
+
+  function displayErrorMessage(message) {
+    for (let messageDiv of errorMessageDivs) {
+      if (messageDiv) {
+        messageDiv.textContent = message;
+        messageDiv.style.display = "block";
+      }
+    }
+    for (let container of containers) {
+      if (container) {
+        container.classList.add("error");
+      }
+    }
+    setTimeout(() => {
+      for (let messageDiv of errorMessageDivs) {
+        if (messageDiv) {
+          messageDiv.style.opacity = 0;
+        }
+      }
+      setTimeout(() => {
+        for (let container of containers) {
+          if (container) {
+            container.classList.remove("error");
+          }
+        }
+        for (let messageDiv of errorMessageDivs) {
+          if (messageDiv) {
+            messageDiv.style.display = "none";
+            messageDiv.remove();
+          }
+        }
+      }, 5000); // Remove after 5 seconds
+    }, 0);
+  }
+
+  function displayInfoMessage(message) {
+    for (let messageDiv of infoMessageDivs) {
+      if (messageDiv) {
+        messageDiv.textContent = message;
+        messageDiv.style.display = "block";
+      }
+    }
+    for (let container of containers) {
+      if (container) {
+        container.classList.add("info");
+      }
+    }
+    setTimeout(() => {
+      for (let messageDiv of infoMessageDivs) {
+        if (messageDiv) {
+         messageDiv.style.opacity = 0;
+        }
+      }
+      setTimeout(() => {
+        for (let container of containers) {
+          if (container) {
+            container.classList.remove("info");
+          }
+        }
+        for (let messageDiv of infoMessageDivs) {
+          if (messageDiv) {
+            messageDiv.style.display = "none";
+            messageDiv.remove();
+          }
+        }
+      }, 5000); // Remove after 5 seconds
+    }, 0);
+  }
+
+  function changeToContainer(containerId) {
+    for (let container of containers) {
+      if (container) {
+        container.style.display = "none";
+      }
+    }
+    const selectedContainer = document.getElementById(containerId);
+    if (selectedContainer) {
+      selectedContainer.style.display = "block";
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    errorMessageDivs = [
+      document.getElementById("login-error"),
+      document.getElementById("register-error"),
+      document.getElementById("reset-password-error"),
+      document.getElementById("new-password-error"),
+    ];
+    infoMessageDivs = [
+      document.getElementById("login-info"),
+      document.getElementById("register-info"),
+      document.getElementById("reset-password-info"),
+      document.getElementById("new-password-info"),
+    ]
+    containers = [
+      document.getElementById("login-container"),
+      document.getElementById("register-container"),
+      document.getElementById("password-reset-container"),
+      document.getElementById("new-password-container")
+    ];
+    const urlParams = new URLSearchParams(window.location.search);
+    addHiddenInput('login-form', 'state', urlParams.get('state'));
+    addHiddenInput('login-form', 'redirect_url', urlParams.get('redirect_url'));
+    addHiddenInput('login-form', 'scope', urlParams.get('scope'));
+    addHiddenInput('login-form', 'client_id', urlParams.get('client_id'));
+    addHiddenInput('new-password-form', 'resetToken', urlParams.get('resetToken'));
+
+    const register = urlParams.get('register');
+    const resetPassword = urlParams.get('resetToken');
+    if (register) {
+      changeToContainer("register-container")
+    } else if (resetPassword) {
+      changeToContainer("new-password-container");
+    } else {
+      changeToContainer("login-container");
+    }
+
+    const error = urlParams.get('error');
+    if (error) {
+      displayErrorMessage(error);
+    }
+
+    const info = urlParams.get('info');
+    if (info) {
+      displayInfoMessage(info);
+    }
+
+    // Event-Listener für den Register-Button hinzufügen
+    document.getElementById("registerButton").addEventListener("click", function () {
+      changeToContainer("register-container");
+    });
+
+    document.getElementById("loginButton").addEventListener("click", function () {
+      changeToContainer("login-container");
+    });
+
+    document.getElementById("resetPasswordButton").addEventListener("click", function () {
+      changeToContainer("password-reset-container");
+    });
+
+    document.getElementById("password-reset-loginButton").addEventListener("click", function () {
+      changeToContainer("login-container");
+    });
+
+    document.getElementById("new-password-loginButton").addEventListener("click", function () {
+      changeToContainer("login-container");
+    });
+
+    const registerForm = document.getElementById("register-form");
+    if (registerForm) {
+      registerForm.addEventListener("submit", function (event) {
+        const password = document.getElementById("register-input-password").value;
+        const confirmPassword = document.getElementById("register-input-confirm_password").value;
+        if (password !== confirmPassword) {
+
+
+          event.preventDefault();
+          const errorMessage = document.querySelector(".register-container .error-message");
+          errorMessage.textContent = "Passwords don't match";
+          errorMessage.style.display = "block";
+          errorMessage.style.animation = "none";
+          errorMessage.offsetHeight; // Trigger reflow to restart the animation
+          errorMessage.style.animation = "fadeOut 5s forwards";
+        }
+      });
+    }
+
+    const newPasswordForm = document.getElementById("new-password-form");
+    if (newPasswordForm) {
+      newPasswordForm.addEventListener("submit", function (event) {
+        const password = document.getElementById("new-password-input-password").value;
+        const confirmPassword = document.getElementById("new-password-input-confirm_password").value;
+        if (password !== confirmPassword) {
+          event.preventDefault();
+          const errorMessage = document.querySelector(".new-password-container .error-message");
+          errorMessage.textContent = "Passwords don't match";
+          errorMessage.style.display = "block";
+          errorMessage.style.animation = "none";
+          errorMessage.offsetHeight; // Trigger reflow to restart the animation
+          errorMessage.style.animation = "fadeOut 5s forwards";
+        }
+      });
+    }
+  });
+</script>
+
+<body>
+  <div class="login-container" style="display: none;" id="login-container">
+    <h2>ini-tracker.app</h2>
+    <h3>user sign in</h3>
+    <!-- Optional error container -->
+    <div class="error-message" style="display: none;" id="login-error"></div>
+    <div class="info-message" style="display: none;" id="login-info"></div>
+    <form action="/oauth/login" method="POST" id="login-form">
+      <input type="email" name="email" placeholder="Email" required>
+      <input type="password" name="password" placeholder="Password" required>
+      <button type="submit">Login</button>
+    </form>
+    <div class="link-container">
+      <a id="registerButton" class="register-link">Register</a>
+      <a id="resetPasswordButton" class="reset-password-link">Forgot password?</a>
+    </div>
+  </div>
+
+  <div class="register-container" style="display: none;" id="register-container">
+    <h2>ini-tracker.app</h2>
+    <h3>user registration</h3>
+    <div class="error-message" style="display: none;" id="register-error"></div>
+    <div class="info-message" style="display: none;" id="register-info"></div>
+    <form id="register-form" action="/users/register" method="POST">
+      <input type="email" name="email" placeholder="Email" id="register-input-email" required>
+      <input type="password" name="password" placeholder="Password" id="register-input-password" required>
+      <input type="password" name="confirm_password" placeholder="Confirm Password" id="register-input-confirm_password"
+        required>
+      <button type="submit">Register</button>
+    </form>
+    <div class="link-container">
+      <a id="loginButton" class="register-link">Back to login</a>
+    </div>
+  </div>
+
+  <div class="password-reset-container" style="display: none;" id="password-reset-container">
+    <h2>ini-tracker.app</h2>
+    <h3>Reset Password</h3>
+    <div class="error-message" style="display: none;" id="password-reset-error"></div>
+    <div class="info-message" style="display: none;" id="password-reset-info"></div>
+    <form id="password-reset-form" action="/users/reset-password" method="POST">
+      <input type="email" name="email" placeholder="Email" id="password-reset-input-email" required>
+      <button type="submit">Reset password</button>
+    </form>
+    <div class="link-container">
+      <a id="password-reset-loginButton" class="register-link">Back to login</a>
+    </div>
+  </div>
+
+  <div class="new-password-container" style="display: none;" id="new-password-container">
+    <h2>ini-tracker.app</h2>
+    <h3>Set a new password</h3>
+    <div class="error-message" style="display: none;" id="new-password-error"></div>
+    <div class="info-message" style="display: none;" id="new-password-info"></div>
+    <form id="new-password-form" action="/users/password" method="POST">
+      <input type="password" name="new-password" placeholder="Password" id="new-password-input-password" required>
+      <input type="password" name="confirm_password" placeholder="Confirm Password"
+        id="new-password-input-confirm_password" required>
+      <button type="submit">Reset password</button>
+    </form>
+    <div class="link-container">
+      <a id="new-password-loginButton" class="register-link">Back to login</a>
+    </div>
+  </div>
+</body>
+
+</html>

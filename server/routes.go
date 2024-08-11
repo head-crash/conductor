@@ -11,6 +11,10 @@ func (s *RestServer) SetRoutes() {
 		SetRoute("POST", "/users", s.User.Create).
 		SetRoute("POST", "/users/register", s.User.CreateUserFromForm).
 		SetRoute("DELETE", "/users/:userId", s.Auth.ValidateAuthorization, s.User.IsAdmin, s.User.Delete).
+		SetRoute("POST", "/users/reset-password", s.User.ResetPasswordForm).
+		SetRoute("GET", "/users/reset-password", s.User.ResetPasswortPage).
+		SetRoute("POST", "/users/password", s.User.ResetPassword).
+		SetRoute("PUT", "/users/:userId/password", s.Auth.ValidateAuthorization, s.User.IsAdmin, s.User.SetNewPassword).
 		SetRoute("POST", "/clients", s.Auth.ValidateAuthorization, s.User.IsAdmin, s.Client.Create).
 		SetRoute("GET", "/clients", s.Auth.ValidateAuthorization, s.User.IsAdmin, s.Client.GetClients).
 		SetRoute("DELETE", "/clients/:clientId", s.Auth.ValidateAuthorization, s.User.IsAdmin, s.Client.Delete)
