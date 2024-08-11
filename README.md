@@ -17,7 +17,7 @@ Conductor OAuth Server is an open-source OAuth 2.0 server implementation written
 
 ### Prerequisites
 
-- Go 1.16 or higher
+- Go 1.22 or higher
 - SQLite3
 - SMTP server for sending emails
 
