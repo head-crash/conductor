@@ -1,30 +1,24 @@
 openapi: 3.0.0
 info:
   title: API Documentation
-  description: This is the REST API documentation for the conductor oauth server.
+  description: This is the REST API documentation for the Conductor OAuth Server.
   version: 1.0.0
 tags: 
   - name: oauth
-    description: oauth 2.0 operations
+    description: OAuth 2.0 operations
   - name: users
-    description: user related operations
+    description: User related operations
   - name: clients
-    description: client related operations
+    description: Client related operations
 servers:
   - url: http://localhost:8080
     description: Local server
 paths:
   /oauth/token:
     get:
-      summary: Request token
+      summary: Issue token
       tags:
         - oauth
-      parameters:
-        - name: authorization_code
-          in: query
-          required: true
-          schema:
-            type: string
       security:
         - basicAuth: []
       responses:
@@ -42,14 +36,25 @@ paths:
                 $ref: "#/components/schemas/ErrorResponseBody"
   /oauth/login:
     post:
-      summary: Authenticate user
+      summary: Authenticate user via OAuth
       tags:
         - oauth
       requestBody:
         content:
           application/x-www-form-urlencoded:
             schema:
-              $ref: "#/components/schemas/LoginRequestBody"
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+                client_id:
+                  type: string
+                state:
+                  type: string
+                scope:
+                  type: string
       responses:
         "302":
           description: Successful authentication and redirection
@@ -75,7 +80,79 @@ paths:
             text/html:
               schema:
                 type: string
+  /auth/login:
+    post:
+      summary: Basic authentication
+      tags:
+        - auth
+      security:
+        - basicAuth: []
+      responses:
+        "200":
+          description: Successful authentication
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponseBody"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseBody"
+  /auth/renew:
+    get:
+      summary: Renew access token
+      tags:
+        - auth
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Token renewed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RenewTokenRequestBody"
+        "401":
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseBody"
   /users:
+    get:
+      summary: Retrieve users
+      tags:
+        - users
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserAccountOutput"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseBody"
     post:
       summary: Create user
       tags:
@@ -98,11 +175,177 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponseBody"
+  /users/register:
+    post:
+      summary: Register user from form
+      tags:
+        - users
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        "302":
+          description: Successful registration and redirection
+          headers:
+            Location:
+              description: URL of the redirection
+              schema:
+                type: string
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseBody"
+  /users/{userId}:
+    delete:
+      summary: Delete user
+      tags:
+        - users
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: User deleted
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseBody"
+  /users/reset-password:
+    post:
+      summary: Request password reset
+      tags:
+        - users
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+      responses:
+        "200":
+          description: Password reset email sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Password reset email sent
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseBody"
+    get:
+      summary: Display password reset page
+      tags:
+        - users
+      responses:
+        "200":
+          description: Password reset page displayed successfully
+          content:
+            text/html:
+              schema:
+                type: string
+  /users/password:
+    post:
+      summary: Reset password
+      tags:
+        - users
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                resetToken:
+                  type: string
+                new-password:
+                  type: string
+      responses:
+        "302":
+          description: Password reset successfully and redirection
+          headers:
+            Location:
+              description: URL of the redirection
+              schema:
+                type: string
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseBody"
+  /users/{userId}/password:
+    put:
+      summary: Set new password for user
+      tags:
+        - users
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetUserPasswordRequestBody"
+      responses:
+        "200":
+          description: Password updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Password updated
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseBody"
   /clients:
     post:
       summary: Create a new client
       tags:
         - clients
+      security:
+        - BearerAuth: []
       requestBody:
         description: Request body for creating a new client
         required: true
@@ -116,41 +359,87 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: User created
+                $ref: "#/components/schemas/CreateClientResponseBody"
         "400":
           description: Bad request
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: Invalid request body
+                $ref: "#/components/schemas/ErrorResponseBody"
         "409":
           description: Conflict
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: A user with that email already exists
+                $ref: "#/components/schemas/ErrorResponseBody"
         "500":
           description: Internal server error
           content:
             application/json:
               schema:
+                $ref: "#/components/schemas/ErrorResponseBody"
+    get:
+      summary: Retrieve clients
+      tags:
+        - clients
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of clients
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ClientOutput"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseBody"
+  /clients/{clientId}:
+    delete:
+      summary: Delete client
+      tags:
+        - clients
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Client deleted successfully
+          content:
+            application/json:
+              schema:
                 type: object
                 properties:
-                  error:
+                  message:
                     type: string
-                    example: Secret encryption failed
+                    example: Client deleted
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseBody"
 components:
   schemas:
     TokenResponseBody:
@@ -161,6 +450,16 @@ components:
         token_type:
           type: string
         refresh_token:
+          type: string
+        expires_in:
+          type: string
+          format: date-time
+    RenewTokenRequestBody:
+      type: object
+      properties:
+        access_token:
+          type: string
+        token_type:
           type: string
         expires_in:
           type: string
@@ -182,23 +481,10 @@ components:
         created_at:
           type: string
           format: date-time
-    LoginRequestBody:
+    SetUserPasswordRequestBody:
       type: object
       properties:
-        email:
-          type: string
         password:
-          type: string
-        client_id:
-          type: string
-        scope:
-          type: string
-        state:
-          type: string
-    ErrorResponseBody:
-      type: object
-      properties:
-        error:
           type: string
     CreateClientRequestBody:
       type: object
@@ -212,16 +498,34 @@ components:
       required:
         - secret
         - redirectUrl
-    ClientResponseBody:
+    CreateClientResponseBody:
       type: object
       properties:
         client_id:
           type: string
-        client_name:
+        redirect_url:
           type: string
-        created_at:
+    UserAccountOutput:
+      type: object
+      properties:
+        uuid:
           type: string
-          format: date-time
+        email:
+          type: string
+        role:
+          type: string
+    ClientOutput:
+      type: object
+      properties:
+        client_id:
+          type: string
+        redirect_url:
+          type: string
+    ErrorResponseBody:
+      type: object
+      properties:
+        error:
+          type: string
   securitySchemes:
     basicAuth:
       type: http
@@ -230,5 +534,3 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-security:
-  - BearerAuth: []
