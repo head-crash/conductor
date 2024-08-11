@@ -11,39 +11,47 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// client represents an OAuth client with an embedded Client model.
 type client struct {
 	*models.Client
 }
 
+// ClientHandler handles client-related operations and interactions with the database.
 type ClientHandler struct {
 	db models.Database
 }
 
+// NewClientHandler creates a new ClientHandler with the provided database.
 func NewClientHandler(db models.Database) *ClientHandler {
 	return &ClientHandler{db}
 }
 
+// NewClient creates a new client instance.
 func NewClient() *client {
 	return &client{
 		&models.Client{},
 	}
 }
 
+// SetId sets the ID of the client.
 func (c *client) SetId(id string) *client {
 	c.Id = id
 	return c
 }
 
+// SetSecret sets the secret of the client.
 func (c *client) SetSecret(secret string) *client {
 	c.Secret = secret
 	return c
 }
 
+// SetRedirectUrl sets the redirect URL of the client.
 func (c *client) SetRedirectUrl(redirectUrl string) *client {
 	c.RedirectUrl = redirectUrl
 	return c
 }
 
+// ApiClientResponse returns the API response body for the client creation.
 func (c *client) ApiClientResponse() *models.CreateClientResponseBody {
 	return &models.CreateClientResponseBody{
 		ClientId:    c.Id,
@@ -51,6 +59,7 @@ func (c *client) ApiClientResponse() *models.CreateClientResponseBody {
 	}
 }
 
+// Create handles the creation of a new client from JSON data and responds with the appropriate HTTP status.
 func (ch *ClientHandler) Create(c *gin.Context) {
 	var createClientRequest models.CreateClientRequestBody
 	if err := c.ShouldBindJSON(&createClientRequest); err != nil {
@@ -81,6 +90,7 @@ func (ch *ClientHandler) Create(c *gin.Context) {
 	}
 }
 
+// GetClients retrieves a list of clients with pagination and responds with the appropriate HTTP status.
 func (ch *ClientHandler) GetClients(c *gin.Context) {
 	limit := utils.StrToInt(c.DefaultQuery("limit", "100"))
 	offset := utils.StrToInt(c.DefaultQuery("offset", "0"))
@@ -92,6 +102,7 @@ func (ch *ClientHandler) GetClients(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"clients": clients})
 }
 
+// Delete removes a client by their ID and responds with the appropriate HTTP status.
 func (ch *ClientHandler) Delete(c *gin.Context) {
 	clientId := c.Param("clientId")
 	if err := ch.db.DeleteClient(clientId); err != nil {

@@ -10,6 +10,7 @@ import (
 	"github.com/head-crash/logger"
 )
 
+// RestServer represents the REST server with its handlers and Gin engine.
 type RestServer struct {
 	*gin.Engine
 	Auth   *handlers.AuthHandler
@@ -17,6 +18,8 @@ type RestServer struct {
 	Client *handlers.ClientHandler
 }
 
+// NewServer initializes a new RestServer with the provided database.
+// It sets up the necessary handlers, middleware, and routes.
 func NewServer(db models.Database) *RestServer {
 	server := &RestServer{
 		gin.New(),
@@ -39,16 +42,18 @@ func NewServer(db models.Database) *RestServer {
 	return server
 }
 
+// SetRoute sets a route for the server with the specified HTTP method, path, and handlers.
 func (s *RestServer) SetRoute(httpMethod string, path string, handlers ...gin.HandlerFunc) *RestServer {
 	s.Handle(httpMethod, path, handlers...)
 	return s
 }
 
+// GetLogger returns the default Gin logger middleware.
 func (s *RestServer) GetLogger() gin.HandlerFunc {
 	return gin.Logger()
 }
 
-// CustomLogger is a middleware that generates additional log outputs
+// CustomLogger is a middleware that generates additional log outputs using the provided logger.
 func CustomLogger(logger *logger.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()

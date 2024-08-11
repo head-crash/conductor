@@ -10,12 +10,15 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+// log is the default logger instance
 var log = logger.Default
 
+// Sqlite represents a SQLite database client
 type Sqlite struct {
 	client *sql.DB
 }
 
+// NewSqliteDb initializes a new SQLite database connection and creates necessary tables if they do not exist
 func NewSqliteDb() *Sqlite {
 	var err error
 	var client *sql.DB
@@ -24,7 +27,7 @@ func NewSqliteDb() *Sqlite {
 		log.Fatalln(err)
 	}
 	var DB = Sqlite{client}
-	// Create users table if it doesn't exist
+	// Create users and clients tables if they do not exist
 	createTableQuery := `
 	CREATE TABLE IF NOT EXISTS users (
 		uuid TEXT PRIMARY KEY,
@@ -46,6 +49,7 @@ func NewSqliteDb() *Sqlite {
 	return &DB
 }
 
+// GetUserById retrieves a user from the database by their UUID
 func (db *Sqlite) GetUserById(userId string) (*models.UserAccount, error) {
 	user := &models.UserAccount{}
 	query := `
@@ -63,6 +67,7 @@ func (db *Sqlite) GetUserById(userId string) (*models.UserAccount, error) {
 	return user, nil
 }
 
+// GetUserByEmail retrieves a user from the database by their email
 func (db *Sqlite) GetUserByEmail(email string) (*models.UserAccount, error) {
 	user := &models.UserAccount{}
 	query := `
@@ -80,6 +85,7 @@ func (db *Sqlite) GetUserByEmail(email string) (*models.UserAccount, error) {
 	return user, nil
 }
 
+// CreateUser inserts a new user into the database
 func (db *Sqlite) CreateUser(u *models.UserAccount) error {
 	query := `
 	INSERT INTO users (uuid, email, password, role)
@@ -88,6 +94,7 @@ func (db *Sqlite) CreateUser(u *models.UserAccount) error {
 	return err
 }
 
+// UpdateUser updates an existing user's information in the database
 func (db *Sqlite) UpdateUser(u *models.UserAccount) error {
 	query := `
 	UPDATE users
@@ -97,6 +104,7 @@ func (db *Sqlite) UpdateUser(u *models.UserAccount) error {
 	return err
 }
 
+// DeleteUser removes a user from the database by their UUID
 func (db *Sqlite) DeleteUser(userID string) error {
 	query := `
 	DELETE FROM users
@@ -105,6 +113,7 @@ func (db *Sqlite) DeleteUser(userID string) error {
 	return err
 }
 
+// GetUsers retrieves a list of users from the database with pagination
 func (db *Sqlite) GetUsers(offset, limit int) ([]*models.UserAccountOutput, error) {
 	if offset < 0 {
 		offset = 0
@@ -140,6 +149,7 @@ func (db *Sqlite) GetUsers(offset, limit int) ([]*models.UserAccountOutput, erro
 	return users, nil
 }
 
+// GetClientById retrieves a client from the database by their client ID
 func (db *Sqlite) GetClientById(clientId string) (*models.Client, error) {
 	query := `
 		SELECT clientId, secret, redirectUrl
@@ -159,6 +169,7 @@ func (db *Sqlite) GetClientById(clientId string) (*models.Client, error) {
 	return client, nil
 }
 
+// CreateClient inserts a new client into the database
 func (db *Sqlite) CreateClient(c *models.Client) error {
 	query := `
 	INSERT INTO clients (clientId, secret, redirectUrl)
@@ -167,6 +178,7 @@ func (db *Sqlite) CreateClient(c *models.Client) error {
 	return err
 }
 
+// UpdateClient updates an existing client's information in the database
 func (db *Sqlite) UpdateClient(c *models.Client) error {
 	query := `
 	UPDATE clients
@@ -176,6 +188,7 @@ func (db *Sqlite) UpdateClient(c *models.Client) error {
 	return err
 }
 
+// DeleteClient removes a client from the database by their client ID
 func (db *Sqlite) DeleteClient(clientID string) error {
 	query := `
 	DELETE FROM clients
@@ -184,6 +197,7 @@ func (db *Sqlite) DeleteClient(clientID string) error {
 	return err
 }
 
+// GetClients retrieves a list of clients from the database with pagination
 func (db *Sqlite) GetClients(offset, limit int) ([]*models.ClientOutput, error) {
 	if offset < 0 {
 		offset = 0

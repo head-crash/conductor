@@ -20,11 +20,11 @@
     .error-message {
       color: #fff;
       background-color: rgba(139, 0, 0, 0.5);
-      /* Dunkelroter Hintergrund mit 50% Transparenz */
+      /* Dark red background with 50% transparency */
       padding: 6px;
-      /* Reduziert um 40% von 10px */
+      /* Reduced from 10px */
       margin-bottom: 12px;
-      /* Reduziert um 40% von 20px */
+      /* Reduced from 20px */
       text-align: center;
       animation: fadeOut 10s forwards;
     }
@@ -32,6 +32,7 @@
     .info-message {
       color: #fff;
       background-color: rgba(5, 167, 46, 0.548);
+      /* Green background with 54.8% transparency */
       padding: 6px;
       margin-bottom: 12px;
       text-align: center;
@@ -53,6 +54,7 @@
     .password-reset-container.error,
     .new-password-container.error {
       border: 2px solid #8B0000;
+      /* Dark red border */
       transition: border 1s ease;
     }
 
@@ -61,6 +63,7 @@
     .password-reset-container.info,
     .new-password-container.info {
       border: 2px solid #03a01d9d;
+      /* Green border */
       transition: border 1s ease;
     }
 
@@ -186,8 +189,9 @@
 <script>
   var errorMessageDivs = [];
   var containers = [];
-  var infoMessageDivs
+  var infoMessageDivs = [];
 
+  // Adds a hidden input field to a form with the specified elementId, name, and value
   function addHiddenInput(elementId, name, value) {
     if (value) {
       const form = document.getElementById(elementId);
@@ -203,6 +207,7 @@
     }
   }
 
+  // Displays an error message in all error message divs and adds the error class to containers
   function displayErrorMessage(message) {
     for (let messageDiv of errorMessageDivs) {
       if (messageDiv) {
@@ -237,6 +242,7 @@
     }, 0);
   }
 
+  // Displays an info message in all info message divs and adds the info class to containers
   function displayInfoMessage(message) {
     for (let messageDiv of infoMessageDivs) {
       if (messageDiv) {
@@ -252,7 +258,7 @@
     setTimeout(() => {
       for (let messageDiv of infoMessageDivs) {
         if (messageDiv) {
-         messageDiv.style.opacity = 0;
+          messageDiv.style.opacity = 0;
         }
       }
       setTimeout(() => {
@@ -271,6 +277,7 @@
     }, 0);
   }
 
+  // Changes the visible container to the one with the specified containerId
   function changeToContainer(containerId) {
     for (let container of containers) {
       if (container) {
@@ -283,6 +290,7 @@
     }
   }
 
+  // Initializes the page when the DOM content is loaded
   document.addEventListener("DOMContentLoaded", function () {
     errorMessageDivs = [
       document.getElementById("login-error"),
@@ -295,7 +303,7 @@
       document.getElementById("register-info"),
       document.getElementById("reset-password-info"),
       document.getElementById("new-password-info"),
-    ]
+    ];
     containers = [
       document.getElementById("login-container"),
       document.getElementById("register-container"),
@@ -312,7 +320,7 @@
     const register = urlParams.get('register');
     const resetPassword = urlParams.get('resetToken');
     if (register) {
-      changeToContainer("register-container")
+      changeToContainer("register-container");
     } else if (resetPassword) {
       changeToContainer("new-password-container");
     } else {
@@ -329,35 +337,38 @@
       displayInfoMessage(info);
     }
 
-    // Event-Listener für den Register-Button hinzufügen
+    // Add event listener for the register button
     document.getElementById("registerButton").addEventListener("click", function () {
       changeToContainer("register-container");
     });
 
+    // Add event listener for the login button
     document.getElementById("loginButton").addEventListener("click", function () {
       changeToContainer("login-container");
     });
 
+    // Add event listener for the reset password button
     document.getElementById("resetPasswordButton").addEventListener("click", function () {
       changeToContainer("password-reset-container");
     });
 
+    // Add event listener for the password reset login button
     document.getElementById("password-reset-loginButton").addEventListener("click", function () {
       changeToContainer("login-container");
     });
 
+    // Add event listener for the new password login button
     document.getElementById("new-password-loginButton").addEventListener("click", function () {
       changeToContainer("login-container");
     });
 
+    // Add event listener for the register form submission
     const registerForm = document.getElementById("register-form");
     if (registerForm) {
       registerForm.addEventListener("submit", function (event) {
         const password = document.getElementById("register-input-password").value;
         const confirmPassword = document.getElementById("register-input-confirm_password").value;
         if (password !== confirmPassword) {
-
-
           event.preventDefault();
           const errorMessage = document.querySelector(".register-container .error-message");
           errorMessage.textContent = "Passwords don't match";
@@ -369,6 +380,7 @@
       });
     }
 
+    // Add event listener for the new password form submission
     const newPasswordForm = document.getElementById("new-password-form");
     if (newPasswordForm) {
       newPasswordForm.addEventListener("submit", function (event) {
@@ -392,8 +404,9 @@
   <div class="login-container" style="display: none;" id="login-container">
     <h2>ini-tracker.app</h2>
     <h3>user sign in</h3>
-    <!-- Optional error container -->
+    <!-- Error message container for login -->
     <div class="error-message" style="display: none;" id="login-error"></div>
+    <!-- Info message container for login -->
     <div class="info-message" style="display: none;" id="login-info"></div>
     <form action="/oauth/login" method="POST" id="login-form">
       <input type="email" name="email" placeholder="Email" required>
@@ -409,7 +422,9 @@
   <div class="register-container" style="display: none;" id="register-container">
     <h2>ini-tracker.app</h2>
     <h3>user registration</h3>
+    <!-- Error message container for registration -->
     <div class="error-message" style="display: none;" id="register-error"></div>
+    <!-- Info message container for registration -->
     <div class="info-message" style="display: none;" id="register-info"></div>
     <form id="register-form" action="/users/register" method="POST">
       <input type="email" name="email" placeholder="Email" id="register-input-email" required>
@@ -426,7 +441,9 @@
   <div class="password-reset-container" style="display: none;" id="password-reset-container">
     <h2>ini-tracker.app</h2>
     <h3>Reset Password</h3>
+    <!-- Error message container for password reset -->
     <div class="error-message" style="display: none;" id="password-reset-error"></div>
+    <!-- Info message container for password reset -->
     <div class="info-message" style="display: none;" id="password-reset-info"></div>
     <form id="password-reset-form" action="/users/reset-password" method="POST">
       <input type="email" name="email" placeholder="Email" id="password-reset-input-email" required>
@@ -440,7 +457,9 @@
   <div class="new-password-container" style="display: none;" id="new-password-container">
     <h2>ini-tracker.app</h2>
     <h3>Set a new password</h3>
+    <!-- Error message container for new password -->
     <div class="error-message" style="display: none;" id="new-password-error"></div>
+    <!-- Info message container for new password -->
     <div class="info-message" style="display: none;" id="new-password-info"></div>
     <form id="new-password-form" action="/users/password" method="POST">
       <input type="password" name="new-password" placeholder="Password" id="new-password-input-password" required>

@@ -11,26 +11,31 @@ import (
 
 var getEnvOrDef = utils.GetEnvOrDef
 var DefaultString = utils.DefaultStringFunc
+
+// log is the default logger instance
 var log = logger.Default
 
+// Configuration variables
 var (
-	Title         string
-	SecretKey     string
-	DbFilePath    string
-	ExpirySeconds int
-	Port          string
-	EndpointUrl   string
-	AuthTimeOut   int
-	MainTemplate  string
-	Loglevel      logger.Loglevel
-	SMTPConfig    models.SmtpConfig
-	AdminUserName string
+	Title         string            // Title of the application
+	SecretKey     string            // Secret key for JWT signing
+	DbFilePath    string            // Path to the SQLite database file
+	ExpirySeconds int               // Token expiry time in seconds
+	Port          string            // Port on which the server runs
+	EndpointUrl   string            // URL of the server endpoint
+	AuthTimeOut   int               // Authentication timeout in seconds
+	MainTemplate  string            // Main HTML template content
+	Loglevel      logger.Loglevel   // Log level for the application
+	SMTPConfig    models.SmtpConfig // SMTP configuration for sending emails
+	AdminUserName string            // Default admin username
 )
 
+// StrToInt converts a string to an integer using utility functions.
 func StrToInt(v string) int {
 	return utils.StringToIntenger(utils.StrToIntParams{Value: v})
 }
 
+// LoadConfig loads the configuration settings from environment variables and .env file.
 func LoadConfig() {
 	// Load .env file if it exists
 	err := godotenv.Load()
@@ -60,10 +65,10 @@ func LoadConfig() {
 	SMTPConfig.Password = getEnvOrDef("SMTP_PASSWORD", required)
 	AdminUserName = getEnvOrDef("ADMIN_USER_NAME", DefaultString("admin"))
 
-	// Load login.html template
+	// Load main.html template
 	fileContent, err := os.ReadFile("templates/main.html")
 	if err != nil {
-		log.Fatalf("Failed to read login.html: %v", err)
+		log.Fatalf("Failed to read main.html: %v", err)
 	}
 	MainTemplate = string(fileContent)
 }

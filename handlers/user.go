@@ -15,21 +15,25 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// User represents a user with an embedded UserAccount.
 type User struct {
 	*models.UserAccount
 }
 
+// UserHandler handles user-related operations and interactions with the database.
 type UserHandler struct {
 	db                    models.Database
 	pendingPasswordResets map[string]*User
 }
 
+// deletePendingPasswordResets deletes all pending password reset tokens.
 func (uh *UserHandler) deletePendingPasswordResets() {
-	for token, _ := range uh.pendingPasswordResets {
+	for token := range uh.pendingPasswordResets {
 		delete(uh.pendingPasswordResets, token)
 	}
 }
 
+// StartCleanUpTicker starts a ticker that periodically cleans up pending password resets.
 func (uh *UserHandler) StartCleanUpTicker() *UserHandler {
 	ticker := time.NewTicker(24 * time.Hour)
 	go func() {
@@ -40,26 +44,31 @@ func (uh *UserHandler) StartCleanUpTicker() *UserHandler {
 	return uh
 }
 
+// NewUserHandler creates a new UserHandler with the provided database and starts the cleanup ticker.
 func NewUserHandler(db models.Database) *UserHandler {
 	return (&UserHandler{db, make(map[string]*User)}).StartCleanUpTicker()
 }
 
+// NewUser creates a new User instance.
 func NewUser() *User {
 	return &User{
 		&models.UserAccount{},
 	}
 }
 
+// SetEmail sets the email of the user.
 func (u *User) SetEmail(email string) *User {
 	u.Email = email
 	return u
 }
 
+// SetPassword sets the password of the user.
 func (u *User) SetPassword(password string) *User {
 	u.Password = password
 	return u
 }
 
+// SetRole sets the role of the user if it is valid.
 func (u *User) SetRole(role string) *User {
 	if models.Role(role).IsValid() {
 		u.Role = models.Role(role)
@@ -67,11 +76,13 @@ func (u *User) SetRole(role string) *User {
 	return u
 }
 
+// SetId sets the UUID of the user.
 func (u *User) SetId(id string) *User {
 	u.Uuid = id
 	return u
 }
 
+// setEncryptedPassword encrypts the password and sets it for the user.
 func (u *User) setEncryptedPassword(password string) *User {
 	encryptedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
@@ -82,6 +93,7 @@ func (u *User) setEncryptedPassword(password string) *User {
 	return u
 }
 
+// NewUserFromRegistration creates a new user from registration details.
 func (uh *UserHandler) NewUserFromRegistration(email, password string) *User {
 	newUser := NewUser().
 		SetEmail(email).
@@ -92,6 +104,7 @@ func (uh *UserHandler) NewUserFromRegistration(email, password string) *User {
 	return newUser
 }
 
+// CreateUserFromForm creates a new user from form data and handles the HTTP response.
 func (uh *UserHandler) CreateUserFromForm(c *gin.Context) {
 	email := c.PostForm("email")
 	password := c.PostForm("password")
@@ -107,6 +120,7 @@ func (uh *UserHandler) CreateUserFromForm(c *gin.Context) {
 	c.Redirect(http.StatusFound, "/oauth/login?info="+url.PathEscape("Account successfully created"))
 }
 
+// Create creates a new user from JSON data and handles the HTTP response.
 func (uh *UserHandler) Create(c *gin.Context) {
 	var createUserRequest models.CreateUserRequestBody
 	if err := c.ShouldBindJSON(&createUserRequest); err != nil {
@@ -128,10 +142,12 @@ func (uh *UserHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"message": "User created"})
 }
 
+// IsAdmin checks if the user has an admin role.
 func (u *User) IsAdmin() bool {
 	return u.Role == models.ADMIN
 }
 
+// GetUserFromContext retrieves the user from the Gin context.
 func GetUserFromContext(c *gin.Context) *User {
 	user, exists := c.Get("user")
 	if !exists {
@@ -140,6 +156,7 @@ func GetUserFromContext(c *gin.Context) *User {
 	return user.(*User)
 }
 
+// IsAdmin checks if the user in the context is an admin and handles the HTTP response.
 func (uh *UserHandler) IsAdmin(c *gin.Context) {
 	user := GetUserFromContext(c)
 	if user == nil {
@@ -155,6 +172,7 @@ func (uh *UserHandler) IsAdmin(c *gin.Context) {
 	c.Next()
 }
 
+// SetNewPassword sets a new password for the user and handles the HTTP response.
 func (uh *UserHandler) SetNewPassword(c *gin.Context) {
 	userId := c.Param("userId")
 	newPasswordRequestbody := models.SetUserPasswordRequestBody{}
@@ -182,6 +200,7 @@ func (uh *UserHandler) SetNewPassword(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Password updated"})
 }
 
+// GetUsers retrieves a list of users and handles the HTTP response.
 func (uh *UserHandler) GetUsers(c *gin.Context) {
 	limit := utils.StrToInt(c.DefaultQuery("limit", "100"))
 	offset := utils.StrToInt(c.DefaultQuery("offset", "0"))
@@ -193,6 +212,7 @@ func (uh *UserHandler) GetUsers(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"users": users})
 }
 
+// Delete removes a user by their ID and handles the HTTP response.
 func (uh *UserHandler) Delete(c *gin.Context) {
 	userId := c.Param("userId")
 	if err := uh.db.DeleteUser(userId); err != nil {
@@ -202,6 +222,7 @@ func (uh *UserHandler) Delete(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "User deleted"})
 }
 
+// ResetPasswordForm handles the password reset form submission and sends a reset email.
 func (uh *UserHandler) ResetPasswordForm(c *gin.Context) {
 	email := c.PostForm("email")
 	if email == "" {
@@ -235,11 +256,13 @@ func (uh *UserHandler) ResetPasswordForm(c *gin.Context) {
 	c.Redirect(http.StatusFound, "/oauth/login?info="+url.PathEscape("Password reset email sent"))
 }
 
+// invalidResetToken handles invalid reset token responses.
 func invalidResetToken(c *gin.Context) {
 	c.Redirect(http.StatusFound, "/oauth/login?error="+url.PathEscape("Invalid reset token"))
 	c.Abort()
 }
 
+// ResetPasswortPage displays the password reset page if the reset token is valid.
 func (uh *UserHandler) ResetPasswortPage(c *gin.Context) {
 	resetToken := c.Query("resetToken")
 	log.Debug("Requested resetToken: %s", resetToken)
@@ -252,6 +275,7 @@ func (uh *UserHandler) ResetPasswortPage(c *gin.Context) {
 	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(config.MainTemplate))
 }
 
+// ResetPassword resets the user's password if the reset token is valid and handles the HTTP response.
 func (uh *UserHandler) ResetPassword(c *gin.Context) {
 	resetToken := c.PostForm("resetToken")
 	newPassword := c.PostForm("new-password")

@@ -1,6 +1,6 @@
 package server
 
-// InitRoutes initializes the routes for the server
+// InitRoutes initializes the routes for the server.
 func (s *RestServer) SetRoutes() {
 	s.SetRoute("GET", "/oauth/token", s.Auth.IssueToken).
 		SetRoute("POST", "/oauth/login", s.Auth.AuthenticateOauth).
